@@ -1,0 +1,2160 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QA Receiving — Smart QA Factory</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0f2744;
+  --teal:#0d7a5f;
+  --teal-lt:#e1f5ee;
+  --teal-mid:#1d9e75;
+  --amber:#e8900a;
+  --amber-lt:#faeeda;
+  --red:#c0392b;
+  --red-lt:#fcebeb;
+  --green:#2e7d32;
+  --green-lt:#eaf3de;
+  --blue:#1565c0;
+  --blue-lt:#e3f0ff;
+  --gray1:#f4f5f7;
+  --gray2:#e8eaed;
+  --gray3:#9aa0ab;
+  --gray4:#5c6470;
+  --text:#1a2130;
+  --border:#dde1e7;
+  --white:#ffffff;
+  --radius:10px;
+  --shadow:0 2px 8px rgba(0,0,0,0.08);
+}
+body{font-family:'Sarabun',sans-serif;background:#f0f2f5;color:var(--text);font-size:15px;min-height:100vh}
+
+/* NAV */
+.topnav{background:var(--navy);display:flex;align-items:center;gap:0;padding:0 20px;height:56px;position:sticky;top:0;z-index:100}
+.brand{font-family:'Space Grotesk',sans-serif;color:#fff;font-size:15px;font-weight:600;letter-spacing:.3px;margin-right:24px;white-space:nowrap}
+.brand span{color:#5dca9e;font-size:11px;display:block;font-weight:400;letter-spacing:1px;text-transform:uppercase}
+.nav-tabs{display:flex;gap:2px;flex:1}
+.nav-tab{padding:8px 16px;color:rgba(255,255,255,.55);border:none;background:none;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:14px;border-radius:6px;transition:.15s;white-space:nowrap}
+.nav-tab:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-tab.active{background:rgba(93,202,158,.15);color:#5dca9e;font-weight:500}
+.nav-badge{background:var(--amber);color:#fff;border-radius:10px;font-size:10px;padding:1px 6px;margin-left:4px;vertical-align:middle}
+
+/* LAYOUT */
+.page{display:none;padding:24px 24px 48px;max-width:1100px;margin:0 auto}
+.page.active{display:block}
+
+/* PAGE HEADER */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:16px;flex-wrap:wrap}
+.page-title{font-size:22px;font-weight:600;color:var(--text)}
+.page-subtitle{font-size:13px;color:var(--gray3);margin-top:2px}
+
+/* BUTTONS */
+.btn{padding:9px 18px;border-radius:8px;border:none;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:14px;font-weight:500;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--teal);color:#fff}
+.btn-primary:hover{background:#0a6b52}
+.btn-secondary{background:var(--white);color:var(--gray4);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--gray1)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{background:#a93226}
+.btn-sm{padding:5px 12px;font-size:13px}
+.btn-amber{background:var(--amber);color:#fff}
+.btn-amber:hover{background:#c97b08}
+.btn-icon{width:32px;height:32px;padding:0;border-radius:6px;display:inline-flex;align-items:center;justify-content:center}
+
+/* CARDS */
+.card{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);padding:20px;margin-bottom:16px}
+.card-title{font-size:14px;font-weight:600;color:var(--gray4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.card-title .tag{font-size:11px;background:var(--teal-lt);color:var(--teal);padding:2px 8px;border-radius:12px;margin-left:8px;font-weight:500;text-transform:none;letter-spacing:0}
+
+/* FORM */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.form-grid-2{grid-template-columns:1fr 1fr}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group.span2{grid-column:span 2}
+.form-group.span3{grid-column:span 3}
+label{font-size:13px;font-weight:500;color:var(--gray4)}
+label .req{color:var(--red);margin-left:2px}
+input,select,textarea{border:1px solid var(--border);border-radius:7px;padding:8px 12px;font-size:14px;font-family:'Sarabun',sans-serif;color:var(--text);background:#fff;transition:.15s;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal-mid);box-shadow:0 0 0 3px rgba(29,158,117,.1)}
+input:read-only{background:var(--gray1);color:var(--gray3)}
+textarea{resize:vertical;min-height:72px}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%239aa0ab' d='M6 8L0 0h12z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+
+/* TEMP GRID */
+.temp-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.temp-field{display:flex;flex-direction:column;gap:4px}
+.temp-field label{font-size:12px;color:var(--gray3)}
+.temp-badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;padding:3px 10px;border-radius:12px;width:fit-content;margin-top:3px}
+.temp-pass{background:var(--green-lt);color:var(--green)}
+.temp-fail{background:var(--red-lt);color:var(--red)}
+
+/* CHECK ROW */
+.check-row{display:flex;gap:16px;flex-wrap:wrap;align-items:center;padding:12px 0}
+.check-item{display:flex;align-items:center;gap:8px;cursor:pointer}
+.check-item input[type=radio]{display:none}
+.check-pill{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;border:1.5px solid var(--border);transition:.15s;background:var(--white);color:var(--gray4)}
+.check-item input[type=radio]:checked + .check-pill.pass{background:var(--green-lt);border-color:#4caf50;color:var(--green)}
+.check-item input[type=radio]:checked + .check-pill.fail{background:var(--red-lt);border-color:var(--red);color:var(--red)}
+.check-item input[type=radio]:checked + .check-pill.na{background:var(--gray2);border-color:var(--gray3);color:var(--gray4)}
+
+/* SAMPLING BADGE */
+.sampling-box{background:var(--teal-lt);border:1px solid #9fe1cb;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:12px;margin-top:8px}
+.sampling-icon{font-size:20px}
+.sampling-info{flex:1}
+.sampling-label{font-size:12px;color:var(--teal);font-weight:500}
+.sampling-value{font-size:20px;font-weight:700;color:var(--teal)}
+.sampling-desc{font-size:12px;color:#0a6b52;margin-top:2px}
+
+/* MATERIAL LIST */
+.material-list{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.material-item{border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.material-item-header{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:12px;padding:12px 14px;background:var(--gray1);cursor:pointer}
+.mat-num{width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mat-name{font-weight:500;font-size:14px}
+.mat-type-badge{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.type-RM{background:#fce4ec;color:#c62828}
+.type-DM{background:#fff3e0;color:#e65100}
+.type-PM{background:#e8f5e9;color:#2e7d32}
+.type-CM{background:#e3f2fd;color:#1565c0}
+.material-item-body{padding:14px;border-top:1px solid var(--border);display:none}
+.material-item-body.open{display:block}
+.result-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:12px;font-size:13px;font-weight:600}
+.result-pass{background:var(--green-lt);color:var(--green)}
+.result-fail{background:var(--red-lt);color:var(--red)}
+.result-pending{background:var(--amber-lt);color:var(--amber)}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--gray1);color:var(--gray4);font-weight:600;padding:10px 12px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--border)}
+td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f9fafb}
+.td-code{font-family:'Space Grotesk',sans-serif;font-size:12px;color:var(--gray3)}
+.td-link{color:var(--teal);cursor:pointer;font-weight:500;text-decoration:none}
+.td-link:hover{text-decoration:underline}
+
+/* STATUS PILLS */
+.pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:500}
+.pill-pass,.pill-pass2{background:var(--green-lt);color:var(--green)}
+.pill-fail,.pill-hold{background:var(--red-lt);color:var(--red)}
+.pill-pending{background:var(--amber-lt);color:var(--amber)}
+.pill-closed{background:var(--gray2);color:var(--gray4)}
+.pill-open{background:var(--blue-lt);color:var(--blue)}
+
+/* STAT CARDS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);padding:16px}
+.stat-num{font-size:28px;font-weight:700;margin-top:4px;color:var(--text)}
+.stat-lbl{font-size:12px;color:var(--gray3);font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+.stat-num.green{color:var(--green)}
+.stat-num.red{color:var(--red)}
+.stat-num.amber{color:var(--amber)}
+
+/* TABS INSIDE PAGE */
+.inner-tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px}
+.inner-tab{padding:10px 18px;border:none;background:none;cursor:pointer;font-family:'Sarabun',sans-serif;font-size:14px;color:var(--gray3);border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s}
+.inner-tab.active{color:var(--teal);border-bottom-color:var(--teal);font-weight:500}
+
+/* SAMPLING CALC PAGE */
+.calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.calc-card{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);padding:20px}
+.calc-card h3{font-size:15px;font-weight:600;margin-bottom:4px}
+.calc-card .subtitle{font-size:12px;color:var(--gray3);margin-bottom:16px}
+.calc-result{text-align:center;background:var(--teal-lt);border-radius:8px;padding:16px;margin-top:12px}
+.calc-result .num{font-size:36px;font-weight:700;color:var(--teal)}
+.calc-result .unit{font-size:13px;color:var(--teal);margin-top:2px}
+
+/* STEP INDICATOR */
+.steps{display:flex;align-items:center;gap:0;margin-bottom:24px}
+.step{display:flex;align-items:center;gap:8px}
+.step-dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:#fff;color:var(--gray3);flex-shrink:0}
+.step.active .step-dot{background:var(--teal);border-color:var(--teal);color:#fff}
+.step.done .step-dot{background:var(--green);border-color:var(--green);color:#fff}
+.step-label{font-size:13px;color:var(--gray3);font-weight:400}
+.step.active .step-label,.step.done .step-label{color:var(--text);font-weight:500}
+.step-line{flex:1;height:1px;background:var(--border);margin:0 8px}
+.step-line.done{background:var(--green)}
+
+/* FILTERS */
+.filter-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.filter-row input,.filter-row select{width:auto;flex:1;min-width:140px}
+.search-box{position:relative;flex:2}
+.search-box input{padding-left:34px}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gray3);font-size:14px}
+
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:60px 20px;color:var(--gray3)}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
+.empty-text{font-size:15px;font-weight:500;color:var(--gray4)}
+.empty-sub{font-size:13px;margin-top:4px}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;z-index:999;opacity:0;transform:translateY(8px);transition:.25s;pointer-events:none;max-width:320px}
+.toast.show{opacity:1;transform:none}
+.toast.success{background:var(--teal)}
+.toast.error{background:var(--red)}
+
+/* NC highlight */
+.nc-row td{background:#fff9f0}
+.doc-no{font-family:'Space Grotesk',sans-serif;font-size:11px;background:var(--gray2);padding:2px 7px;border-radius:4px;color:var(--gray4)}
+
+/* MODAL OVERLAY */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,39,68,.55);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:.2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal-box{background:var(--white);border-radius:16px;padding:32px 28px;max-width:460px;width:90%;text-align:center;transform:translateY(12px);transition:.2s}
+.modal-overlay.open .modal-box{transform:none}
+.modal-icon{font-size:42px;margin-bottom:12px}
+.modal-title{font-size:20px;font-weight:600;margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--gray3);margin-bottom:24px;line-height:1.6}
+.modal-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.sheet-preview{background:var(--gray1);border-radius:10px;padding:14px 18px;text-align:left;margin-bottom:20px;border:1px solid var(--border)}
+.sheet-row{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:13px}
+.sheet-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+.sheet-green{background:#c8e6c9;color:#1b5e20}
+.sheet-blue{background:#bbdefb;color:#0d47a1}
+.sheet-amber{background:#ffe0b2;color:#bf360c}
+.sheet-red{background:#ffcdd2;color:#b71c1c}
+
+/* SIGNATURE PAD */
+.sig-wrap{border:2px dashed var(--border);border-radius:10px;overflow:hidden;background:#fafbfc;position:relative;touch-action:none;cursor:crosshair}
+.sig-wrap.signed{border-color:var(--teal-mid);border-style:solid}
+.sig-canvas{width:100%;height:140px;display:block}
+.sig-toolbar{display:flex;justify-content:space-between;align-items:center;padding:7px 12px;border-top:1px solid var(--border);background:#fff}
+.sig-hint{font-size:13px;color:var(--gray3);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;text-align:center}
+.sig-hint.hidden{display:none}
+.sig-clear-btn{font-size:12px;color:var(--red);font-weight:600;border:none;background:none;padding:4px 8px;cursor:pointer}
+.sig-status{font-size:12px;font-weight:600}
+.sig-ok{color:var(--teal)}
+.sig-empty{color:var(--gray3)}
+.sig-preview-strip{display:none;border:1px solid var(--border);border-radius:8px;padding:8px 12px;background:var(--gray1);margin-top:8px;align-items:center;gap:12px}
+.sig-preview-strip img{height:48px;object-fit:contain;border-radius:4px;background:#fff;padding:4px;border:1px solid var(--border)}
+
+
+/* PHOTO UPLOAD */
+.photo-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.photo-slot{border:2px dashed var(--border);border-radius:8px;overflow:hidden;background:var(--gray1);transition:.15s;position:relative}
+.photo-slot.has-photo{border-color:var(--teal-mid);border-style:solid;background:transparent}
+.photo-slot-label{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px 8px;cursor:pointer;min-height:90px}
+.photo-slot-label:hover{background:var(--teal-lt)}
+.photo-slot-icon{font-size:22px;opacity:.5}
+.photo-slot-text{font-size:12px;font-weight:500;color:var(--gray4);text-align:center}
+.photo-slot-sub{font-size:10px;color:var(--gray3)}
+.photo-preview{width:100%;height:100px;object-fit:cover;display:block;border-radius:6px}
+.photo-clear{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(192,57,43,.85);color:#fff;border:none;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.photo-slot-title{font-size:11px;font-weight:700;color:var(--gray4);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+
+/* Print specific */
+@media print{.topnav,.filter-row,.btn,button{display:none!important}.page{display:block!important}.card{break-inside:avoid}}
+@media(max-width:700px){.form-grid{grid-template-columns:1fr}.form-grid.form-grid-2{grid-template-columns:1fr}.stats-row{grid-template-columns:1fr 1fr}.calc-grid{grid-template-columns:1fr}.steps{flex-wrap:wrap}}
+</style>
+
+<script>
+
+// ═══════════════════════════════════════════════════════════════
+//  SWI Foods Cloud Direct — Cloudflare D1 REST API
+//  FM-QA-31 | SD-QA-08 | ไม่ต้อง deploy Worker
+// ═══════════════════════════════════════════════════════════════
+const CF_ACCT   = 'acd0ef2518aed1f77c126d0592469ae1';
+const CF_DB     = '391d171b-81b2-4156-bff0-ad9f0ae7e6af';
+const D1_URL    = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCT}/d1/database/${CF_DB}/query`;
+const TOK_KEY   = 'swi_cf_token';
+const QUEUE_KEY = 'swi_sync_queue';
+
+function getCFToken(){ return localStorage.getItem(TOK_KEY)||''; }
+function setCFToken(t){ localStorage.setItem(TOK_KEY,t); }
+function cloudReady(){ return !!getCFToken()&&navigator.onLine; }
+
+async function d1(sql,params=[]){
+  const token=getCFToken();
+  if(!token) throw new Error('No API Token — กดปุ่ม ☁ เพื่อตั้งค่า');
+  const res=await fetch(D1_URL,{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+    body:JSON.stringify({sql,params})
+  });
+  const data=await res.json();
+  if(!data.success) throw new Error(data.errors?.map(e=>e.message).join(', ')||'D1 error '+res.status);
+  return data.result?.[0]||{results:[]};
+}
+
+function queueRec(rec){
+  try{
+    const q=JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]');
+    q.push({rec,ts:Date.now()});
+    localStorage.setItem(QUEUE_KEY,JSON.stringify(q));
+  }catch(e){}
+}
+async function flushQueue(){
+  if(!cloudReady()) return;
+  try{
+    const q=JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]');
+    if(!q.length) return;
+    const rem=[];
+    for(const item of q){
+      const ok=await cloudSaveRecord(item.rec).catch(()=>false);
+      if(!ok) rem.push(item);
+    }
+    localStorage.setItem(QUEUE_KEY,JSON.stringify(rem));
+    if(rem.length<q.length) showCloudStatus(`☁ Queue Sync: ${q.length-rem.length} รายการ`,'ok');
+  }catch(e){}
+}
+
+async function cloudSaveRecord(rec){
+  if(!cloudReady()){queueRec(rec);return false;}
+  try{
+    const sp=(typeof SUPPLIERS!=='undefined')?SUPPLIERS.find(s=>s.id===rec.supplier)||{}:{};
+    const mats=rec.materials||rec.mats||[];
+    const allPass=mats.every(m=>m.result==='PASS');
+    const hasRej=mats.some(m=>m.result==='REJECT');
+    const overall=allPass?'PASS':hasRej?'REJECT':'HOLD';
+    await d1(`INSERT INTO receiving_header(doc_no,date,time,supplier_id,supplier_name,car_registration,car_temp,qa_inspector,note,signer_name,signed_at,overall_result,created_at)VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(doc_no) DO UPDATE SET date=excluded.date,time=excluded.time,supplier_id=excluded.supplier_id,supplier_name=excluded.supplier_name,car_registration=excluded.car_registration,car_temp=excluded.car_temp,qa_inspector=excluded.qa_inspector,note=excluded.note,signer_name=excluded.signer_name,signed_at=excluded.signed_at,overall_result=excluded.overall_result`,
+      [rec.docNo,rec.date,rec.time||'',rec.supplier||'',sp.name||'',rec.carReg||'',rec.carTemp??null,rec.inspector||'',rec.note||'',rec.sig?.signerName||'',rec.sig?.signedAt||'',overall,new Date().toISOString()]);
+
+    for(let i=0;i<mats.length;i++){
+      const m=mats[i];
+      const id=rec.docNo+'_'+String(i+1).padStart(2,'0');
+      const mi=(typeof MATERIALS!=='undefined')?MATERIALS.find(x=>x.code===m.code)||{}:{};
+      const ts=[m.t1,m.t2,m.t3].map(Number).filter(t=>!isNaN(t));
+      const avg=ts.length?parseFloat((ts.reduce((a,b)=>a+b,0)/ts.length).toFixed(1)):null;
+      const mn=mi.minTemp??mi.minT; const mx=mi.maxTemp??mi.maxT;
+      const tst=ts.length&&mn!=null?(ts.every(t=>t>=mn&&t<=mx)?'PASS':'FAIL'):'';
+      await d1(`INSERT INTO receiving_detail(detail_id,doc_no,date,supplier_name,material_code,material_name,material_type,lot_no,qty,unit,mfg_date,exp_date,temp1,temp2,temp3,avg_temp,temp_status,visual_check,leak_check,document_check,result,note,photo1,photo2,created_at)VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(detail_id) DO UPDATE SET lot_no=excluded.lot_no,qty=excluded.qty,unit=excluded.unit,mfg_date=excluded.mfg_date,exp_date=excluded.exp_date,temp1=excluded.temp1,temp2=excluded.temp2,temp3=excluded.temp3,avg_temp=excluded.avg_temp,temp_status=excluded.temp_status,visual_check=excluded.visual_check,leak_check=excluded.leak_check,document_check=excluded.document_check,result=excluded.result,note=excluded.note,photo1=excluded.photo1,photo2=excluded.photo2`,
+        [id,rec.docNo,rec.date,sp.name||'',m.code||'',m.name||'',m.type||mi.type||'',m.lot||'',parseFloat(m.qty)||null,m.unit||'',m.mfg||'',m.exp||'',m.t1??null,m.t2??null,m.t3??null,avg,tst,m.visual||'',m.leak||'',m.doc||'',m.result||'',m.note||'',m.photo1?m.photo1.slice(0,409600):null,m.photo2?m.photo2.slice(0,409600):null,new Date().toISOString()]);
+    }
+    if(rec.sig?.sigBase64){
+      await d1(`INSERT INTO signatures(doc_no,signer_name,signed_at,sig_base64,created_at)VALUES(?,?,?,?,?) ON CONFLICT(doc_no) DO UPDATE SET signer_name=excluded.signer_name,signed_at=excluded.signed_at,sig_base64=excluded.sig_base64`,
+        [rec.docNo,rec.sig.signerName||'',rec.sig.signedAt||'',rec.sig.sigBase64.slice(0,204800),new Date().toISOString()]);
+    }
+    showCloudStatus('☁ บันทึกลง Cloud D1 แล้ว','ok');
+    flushQueue();
+    return true;
+  }catch(e){console.warn('[D1]',e.message);queueRec(rec);showCloudStatus('⚠ '+e.message.slice(0,60),'warn');return false;}
+}
+
+async function cloudSaveNC(nc){
+  if(!cloudReady()) return false;
+  try{
+    const sp=(typeof SUPPLIERS!=='undefined')?SUPPLIERS.find(s=>s.id===(nc.supplier||nc.supplier_id))||{}:{};
+    await d1(`INSERT OR REPLACE INTO nc_log(nc_id,doc_no,supplier_id,supplier_name,fail_type,corrective_action,qa_supervisor,status,closed_date,note,created_at)VALUES(?,?,?,?,?,?,?,?,?,?,?)`,
+      [nc.id||nc.nc_id,nc.docNo||nc.doc_no||'',nc.supplier||'',sp.name||nc.supplierName||'',nc.failType||nc.fail_type||'',nc.corrective||nc.corrective_action||'—',nc.qa||nc.qa_supervisor||'',nc.status||'Open',nc.closedDate||nc.closed_date||null,nc.note||'',new Date().toISOString()]);
+    return true;
+  }catch(e){console.warn('[D1 NC]',e.message);return false;}
+}
+async function cloudCloseNC(id,body){
+  if(!cloudReady()) return false;
+  try{await d1(`UPDATE nc_log SET status=?,closed_date=?,corrective_action=COALESCE(?,corrective_action) WHERE nc_id=?`,[body.status||'Closed',body.closed_date||new Date().toISOString().split('T')[0],body.corrective_action||null,id]);return true;}catch(e){return false;}
+}
+async function cloudFetchAll(opts={}){
+  if(!cloudReady()) return null;
+  try{
+    let w='WHERE 1=1';
+    if(opts.from) w+=` AND date>='${opts.from}'`;
+    if(opts.to)   w+=` AND date<='${opts.to}'`;
+    const h=await d1(`SELECT h.*,s.signer_name sig_name,s.signed_at sig_at FROM receiving_header h LEFT JOIN signatures s ON h.doc_no=s.doc_no ${w} ORDER BY h.date DESC,h.time DESC LIMIT 300`);
+    const data=await Promise.all((h.results||[]).map(async hdr=>{
+      const d2=await d1(`SELECT * FROM receiving_detail WHERE doc_no=? ORDER BY detail_id`,[hdr.doc_no]);
+      return {...hdr,details:d2.results||[]};
+    }));
+    return {success:true,count:data.length,data};
+  }catch(e){console.warn('[D1 fetch]',e.message);return null;}
+}
+async function cloudFetchNC(){
+  if(!cloudReady()) return null;
+  try{const r=await d1(`SELECT * FROM nc_log ORDER BY created_at DESC LIMIT 300`);return {success:true,data:r.results||[]};}catch(e){return null;}
+}
+async function cloudExportData(opts={}){
+  if(!cloudReady()) return null;
+  try{
+    let w='WHERE 1=1';
+    if(opts.from) w+=` AND h.date>='${opts.from}'`;
+    if(opts.to)   w+=` AND h.date<='${opts.to}'`;
+    const [H,D,N]=await Promise.all([
+      d1(`SELECT h.*,s.signer_name sig_name,s.signed_at sig_at FROM receiving_header h LEFT JOIN signatures s ON h.doc_no=s.doc_no ${w} ORDER BY h.date DESC LIMIT 1000`),
+      d1(`SELECT d.detail_id,d.doc_no,d.date,d.supplier_name,d.material_code,d.material_name,d.material_type,d.lot_no,d.qty,d.unit,d.mfg_date,d.exp_date,d.temp1,d.temp2,d.temp3,d.avg_temp,d.temp_status,d.visual_check,d.leak_check,d.document_check,d.result,d.note FROM receiving_detail d JOIN receiving_header h ON d.doc_no=h.doc_no ${w} ORDER BY d.doc_no,d.detail_id`),
+      d1(`SELECT * FROM nc_log ORDER BY created_at DESC`),
+    ]);
+    return {success:true,headers:H.results||[],details:D.results||[],nc_logs:N.results||[]};
+  }catch(e){console.warn('[D1 export]',e.message);return null;}
+}
+
+// ── CLOUD SYNC helpers for both apps ─────────────────────────────────────
+async function syncFromCloud(){
+  if(!cloudReady()){showCloudStatus('กรุณาตั้งค่า API Token ก่อน','warn');openCloudSettings();return;}
+  showCloudStatus('กำลัง Sync จาก Cloud...','');
+  const res=await cloudFetchAll();
+  if(!res||!res.data){showCloudStatus('Sync ล้มเหลว','warn');return;}
+  res.data.forEach(cr=>{
+    const sp=(typeof SUPPLIERS!=='undefined')?SUPPLIERS.find(s=>s.id===cr.supplier_id)||{name:cr.supplier_name}:{name:cr.supplier_name};
+    const det=cr.details||[];
+    const mats=det.map(d=>({code:d.material_code,name:d.material_name,type:d.material_type,lot:d.lot_no,qty:d.qty,unit:d.unit,mfg:d.mfg_date,exp:d.exp_date,t1:d.temp1,t2:d.temp2,t3:d.temp3,visual:d.visual_check,leak:d.leak_check,doc:d.document_check,result:d.result,note:d.note,photo1:d.photo1,photo2:d.photo2}));
+    const rec={docNo:cr.doc_no,date:cr.date,time:cr.time||'',supplier:cr.supplier_id||'',carReg:cr.car_registration||'',carTemp:cr.car_temp,inspector:cr.qa_inspector||'',note:cr.note||'',sig:{signerName:cr.sig_name||'',signedAt:cr.sig_at||''}};
+    // both apps use different field names
+    rec.materials=mats; rec.mats=mats;
+    const arr=(typeof records!=='undefined')?records:(typeof records!=='undefined'?records:[]);
+    const ex=arr.findIndex(r=>r.docNo===cr.doc_no);
+    if(ex>=0) arr[ex]=rec; else arr.unshift(rec);
+  });
+  const ncRes=await cloudFetchNC();
+  if(ncRes&&ncRes.data){
+    const arr2=(typeof ncLogs!=='undefined')?ncLogs:[];
+    ncRes.data.forEach(nc=>{
+      const obj={id:nc.nc_id,docNo:nc.doc_no,supplier:nc.supplier_id||'',failType:nc.fail_type,corrective:nc.corrective_action,qa:nc.qa_supervisor,status:nc.status,closedDate:nc.closed_date||'',note:nc.note||''};
+      const ex=arr2.findIndex(n=>n.id===nc.nc_id);
+      if(ex>=0) arr2[ex]=obj; else arr2.unshift(obj);
+    });
+  }
+  if(typeof renderHistory==='function') renderHistory();
+  if(typeof renderHist==='function') renderHist();
+  if(typeof renderNC==='function') renderNC();
+  if(typeof renderHome==='function') renderHome();
+  showCloudStatus(`☁ Sync ${res.count} รายการจาก Cloud เรียบร้อย`,'ok');
+}
+
+async function syncFromCloudMob(){ return syncFromCloud(); }
+
+async function exportExcelCloud(){
+  const res=await cloudExportData();
+  if(!res||!res.headers){if(typeof exportExcel==='function')exportExcel();return;}
+  const _orig=(typeof records!=='undefined')?[...records]:[];
+  const _origNC=(typeof ncLogs!=='undefined')?[...ncLogs]:[];
+  if(typeof records!=='undefined') records=res.headers.map(h=>({
+    docNo:h.doc_no,date:h.date,time:h.time||'',supplier:h.supplier_id||'',
+    carReg:h.car_registration||'',carTemp:h.car_temp,inspector:h.qa_inspector||'',note:h.note||'',
+    materials:res.details.filter(d=>d.doc_no===h.doc_no).map(d=>({code:d.material_code,name:d.material_name,type:d.material_type,lot:d.lot_no,qty:d.qty,unit:d.unit,mfg:d.mfg_date,exp:d.exp_date,t1:d.temp1,t2:d.temp2,t3:d.temp3,visual:d.visual_check,leak:d.leak_check,doc:d.document_check,result:d.result,note:d.note})),
+    sig:{signerName:h.sig_name||'',signedAt:h.sig_at||''}
+  }));
+  if(typeof ncLogs!=='undefined') ncLogs=res.nc_logs.map(n=>({id:n.nc_id,docNo:n.doc_no,supplier:n.supplier_id||'',failType:n.fail_type,corrective:n.corrective_action,qa:n.qa_supervisor,status:n.status,closedDate:n.closed_date||'',note:n.note||''}));
+  if(typeof exportExcel==='function') exportExcel();
+  if(typeof records!=='undefined') records=_orig;
+  if(typeof ncLogs!=='undefined') ncLogs=_origNC;
+}
+
+// ── STATUS BAR ────────────────────────────────────────────────────────────
+function showCloudStatus(msg,type=''){
+  let el=document.getElementById('_cst');
+  if(!el){el=document.createElement('div');el.id='_cst';
+    el.style.cssText='position:fixed;bottom:75px;left:50%;transform:translateX(-50%);padding:7px 18px;border-radius:20px;font-size:12px;font-weight:600;z-index:9000;opacity:0;transition:.25s;pointer-events:none;white-space:nowrap;color:#fff;';
+    document.body.appendChild(el);}
+  el.textContent=msg;
+  el.style.background=type==='ok'?'#0d7a5f':type==='warn'?'#e8900a':'#0f2744';
+  el.style.opacity='1';clearTimeout(el._t);el._t=setTimeout(()=>{el.style.opacity='0';},3200);
+}
+
+// ── SETTINGS MODAL ────────────────────────────────────────────────────────
+function openCloudSettings(){
+  document.getElementById('_csm')?.remove();
+  const m=document.createElement('div');m.id='_csm';
+  m.style.cssText='position:fixed;inset:0;background:rgba(15,39,68,.65);z-index:9000;display:flex;align-items:center;justify-content:center;';
+  m.innerHTML=`<div style="background:#fff;border-radius:16px;padding:28px 24px;max-width:500px;width:92%;font-family:Sarabun,sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <div style="font-size:20px;font-weight:700;color:#0f2744">☁ ตั้งค่า Cloudflare Cloud</div>
+        <div style="font-size:12px;color:#9aa0ab;margin-top:2px">เชื่อมต่อ D1 Database: qa-factory-db</div>
+      </div>
+      <button onclick="document.getElementById('_csm').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#9aa0ab">✕</button>
+    </div>
+    <div style="background:#e1f5ee;border-radius:10px;padding:14px;font-size:13px;margin-bottom:16px;line-height:1.8;border:1px solid #9fe1cb">
+      <strong style="color:#0d7a5f">วิธีสร้าง API Token (ทำครั้งเดียว):</strong><br>
+      1. เปิด <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" style="color:#0d7a5f;font-weight:600">Cloudflare Dashboard → API Tokens</a><br>
+      2. กด <strong>Create Token</strong> → เลือก Template <strong>"Edit Cloudflare Workers"</strong><br>
+      3. กด <strong>Continue to Summary</strong> → <strong>Create Token</strong><br>
+      4. Copy token มาใส่ด้านล่าง และกด <strong>ทดสอบ & บันทึก</strong>
+    </div>
+    <label style="font-size:13px;font-weight:700;color:#5c6470;display:block;margin-bottom:6px">Cloudflare API Token <span style="color:#c0392b">*</span></label>
+    <div style="position:relative">
+      <input id="_cti" type="password" placeholder="เช่น xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        style="width:100%;border:1.5px solid #dde1e7;border-radius:10px;padding:11px 40px 11px 12px;font-size:14px;font-family:Sarabun,sans-serif;box-sizing:border-box"
+        value="${getCFToken()}">
+      <button onclick="const i=document.getElementById('_cti');i.type=i.type==='password'?'text':'password'"
+        style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;font-size:14px;color:#9aa0ab">👁</button>
+    </div>
+    <div id="_cts" style="font-size:12px;min-height:20px;margin:8px 0 16px;padding:0 4px"></div>
+    <div style="display:grid;grid-template-columns:1fr auto;gap:10px">
+      <button onclick="testAndSaveToken()"
+        style="padding:13px;background:#0d7a5f;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:Sarabun,sans-serif">
+        ✓ ทดสอบ & บันทึก
+      </button>
+      <button onclick="setCFToken('');updateCloudBadge(false);document.getElementById('_cts').textContent='ลบ Token แล้ว';document.getElementById('_cti').value=''"
+        style="padding:13px 16px;background:#fff0f0;color:#c0392b;border:1px solid #ffcdd2;border-radius:10px;font-size:13px;cursor:pointer;font-family:Sarabun,sans-serif">
+        🗑 ลบ
+      </button>
+    </div>
+  </div>`;
+  document.body.appendChild(m);
+  m.addEventListener('click',e=>{if(e.target===m)m.remove();});
+}
+
+async function testAndSaveToken(){
+  const token=document.getElementById('_cti').value.trim();
+  const st=document.getElementById('_cts');
+  if(!token){st.style.color='#c0392b';st.textContent='กรุณาใส่ Token';return;}
+  st.style.color='#9aa0ab';st.textContent='⏳ กำลังทดสอบ...';
+  setCFToken(token);
+  try{
+    const r=await d1('SELECT COUNT(*) n FROM receiving_header');
+    const cnt=r.results?.[0]?.n??0;
+    st.style.color='#0d7a5f';
+    st.textContent=`✓ เชื่อมต่อสำเร็จ! มีข้อมูล ${cnt} รายการใน Cloud`;
+    updateCloudBadge(true);
+    setTimeout(()=>{document.getElementById('_csm')?.remove();flushQueue();},1800);
+  }catch(e){
+    st.style.color='#c0392b';
+    st.textContent='✗ ล้มเหลว: '+e.message.slice(0,80);
+    setCFToken('');updateCloudBadge(false);
+  }
+}
+
+function updateCloudBadge(connected){
+  let b=document.getElementById('_cbadge');
+  if(!b){b=document.createElement('button');b.id='_cbadge';
+    b.onclick=openCloudSettings;
+    b.style.cssText='position:fixed;top:10px;right:14px;z-index:160;border:none;border-radius:12px;font-size:11px;font-weight:700;padding:5px 11px;cursor:pointer;transition:.2s;';
+    document.body.appendChild(b);}
+  b.style.background=connected?'rgba(29,158,117,.2)':'rgba(200,200,200,.25)';
+  b.style.color=connected?'#0d7a5f':'#9aa0ab';
+  b.textContent=connected?'☁ Cloud ✓':'☁ ตั้งค่า Cloud';
+}
+
+(async()=>{
+  updateCloudBadge(!!getCFToken());
+  if(cloudReady()){
+    try{await d1('SELECT 1');updateCloudBadge(true);flushQueue();}
+    catch(e){updateCloudBadge(false);}
+  }
+  window.addEventListener('online',flushQueue);
+})();
+
+</script>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="topnav">
+  <div class="brand">Smart QA Factory<span>QA Receiving System</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('receiving')">&#x2B; บันทึกการรับ</button>
+    <button class="nav-tab" onclick="showPage('history')">&#x1F4CB; ประวัติการรับ</button>
+    <button class="nav-tab" onclick="showPage('nc')">&#x26A0; NC Log <span class="nav-badge" id="nc-count">3</span></button>
+    <button class="nav-tab" onclick="showPage('sampling')">&#x1F4D0; ตารางสุ่ม</button>
+  </div>
+</nav>
+
+<!-- ===== PAGE: RECEIVING ===== -->
+<div class="page active" id="page-receiving">
+  <div class="page-header">
+    <div>
+      <div class="page-title">บันทึกการรับวัตถุดิบ</div>
+      <div class="page-subtitle">กรอกข้อมูล QA Receiving — SD-QA-08</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary btn-sm" onclick="clearForm()">&#x21BA; ล้างฟอร์ม</button>
+      <button class="btn btn-primary" onclick="saveRecord()">&#x1F4BE; บันทึกการรับ</button>
+    </div>
+  </div>
+
+  <!-- STEPS -->
+  <div class="steps">
+    <div class="step active" id="step-dot-1"><div class="step-dot">1</div><span class="step-label">ข้อมูลการรับ</span></div>
+    <div class="step-line" id="step-line-1"></div>
+    <div class="step" id="step-dot-2"><div class="step-dot">2</div><span class="step-label">รายการวัตถุดิบ</span></div>
+    <div class="step-line" id="step-line-2"></div>
+    <div class="step" id="step-dot-3"><div class="step-dot">3</div><span class="step-label">สรุปผล</span></div>
+  </div>
+
+  <!-- STEP 1: HEADER -->
+  <div id="sec-header" class="card">
+    <div class="card-title">&#x1F69A; ข้อมูลรถและผู้ส่ง <span class="tag">STEP 1</span></div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>วันที่รับ <span class="req">*</span></label>
+        <input type="date" id="rcv-date">
+      </div>
+      <div class="form-group">
+        <label>เวลา <span class="req">*</span></label>
+        <input type="time" id="rcv-time">
+      </div>
+      <div class="form-group">
+        <label>เลขที่เอกสาร</label>
+        <input type="text" id="rcv-docno" placeholder="Auto-generate" readonly>
+      </div>
+      <div class="form-group">
+        <label>ผู้ตรวจรับ QA <span class="req">*</span></label>
+        <input type="text" id="rcv-inspector" placeholder="ชื่อ QA Inspector" value="สุกพัฒน์">
+      </div>
+    </div>
+    <div class="form-grid" style="margin-top:12px">
+      <div class="form-group">
+        <label>Supplier <span class="req">*</span></label>
+        <select id="rcv-supplier" onchange="onSupplierChange()">
+          <option value="">-- เลือก Supplier --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>ประเภทวัตถุดิบ</label>
+        <input type="text" id="rcv-mattype" readonly placeholder="Auto">
+      </div>
+      <div class="form-group">
+        <label>ทะเบียนรถ</label>
+        <input type="text" id="rcv-car" placeholder="เช่น 4ฒฉ 8503">
+      </div>
+      <div class="form-group">
+        <label>อุณหภูมิรถ (°C)</label>
+        <input type="number" id="rcv-cartemp" step="0.1" placeholder="วัดด้วย MIT001">
+        <div id="cartemp-status" style="margin-top:4px"></div>
+      </div>
+    </div>
+    <div class="form-grid" style="margin-top:12px">
+      <div class="form-group span2">
+        <label>หมายเหตุการรับ</label>
+        <textarea id="rcv-note" placeholder="หมายเหตุ เช่น มี COA, เอกสารไม่ครบ ฯลฯ"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: MATERIALS -->
+  <div id="sec-materials" class="card">
+    <div class="card-title">&#x1F4E6; รายการวัตถุดิบ <span class="tag" id="mat-count-tag">0 รายการ</span></div>
+
+    <!-- Material Items List -->
+    <div id="material-list" class="material-list"></div>
+
+    <!-- Add Material Button -->
+    <button class="btn btn-secondary" onclick="addMaterial()" style="width:100%;justify-content:center;border-style:dashed;color:var(--teal);border-color:var(--teal)">
+      &#x2B; เพิ่มรายการวัตถุดิบ
+    </button>
+  </div>
+
+  <!-- SIGNATURE CARD -->
+  <div class="card" id="sec-signature">
+    <div class="card-title">&#x270D;&#xFE0F; ลายเซ็นอิเล็กทรอนิกส์ <span class="tag">QA Inspector</span></div>
+    <div class="form-grid" style="margin-bottom:14px">
+      <div class="form-group">
+        <label>ชื่อผู้เซ็น <span class="req">*</span></label>
+        <input type="text" id="desk-sig-name" placeholder="ชื่อ QA Inspector">
+      </div>
+      <div class="form-group">
+        <label>วันที่ / เวลา</label>
+        <input type="text" id="desk-sig-dt" readonly>
+      </div>
+    </div>
+    <label style="font-size:13px;font-weight:500;color:var(--gray4);margin-bottom:6px;display:block">ลายเซ็น <span class="req">*</span> — เซ็นในกรอบด้านล่าง</label>
+    <div class="sig-wrap" id="sig-wrap-d">
+      <canvas class="sig-canvas" id="sig-canvas-d" width="900" height="180"></canvas>
+      <div class="sig-hint" id="sig-hint-d">&#x270D; เซ็นชื่อที่นี่</div>
+      <div class="sig-toolbar">
+        <span class="sig-status sig-empty" id="sig-status-d">ยังไม่ได้เซ็น</span>
+        <button class="sig-clear-btn" onclick="clearSig('d')">&#x21BA; ลบลายเซ็น</button>
+      </div>
+    </div>
+    <div class="sig-preview-strip" id="sig-preview-strip-d">
+      <img id="sig-preview-img-d" alt="ลายเซ็น">
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:600;color:var(--teal)">&#x2714; เซ็นเรียบร้อย</div>
+        <div id="sig-preview-name-d" style="font-size:13px;color:var(--text)"></div>
+        <div id="sig-preview-dt-d" style="font-size:12px;color:var(--gray3)"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PAGE: HISTORY ===== -->
+<div class="page" id="page-history">
+  <div class="page-header">
+    <div>
+      <div class="page-title">ประวัติการรับวัตถุดิบ</div>
+      <div class="page-subtitle">รายการบันทึกการรับทั้งหมด</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary btn-sm" onclick="exportCSV()">&#x2193; CSV</button>
+      <button class="btn btn-secondary btn-sm" onclick="syncFromCloud()">&#x2601; Sync Cloud</button>
+      <button class="btn btn-primary btn-sm" onclick="exportExcelCloud()">&#x1F4E5; Export Excel</button>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row" id="hist-stats">
+    <div class="stat-card"><div class="stat-lbl">รับทั้งหมด</div><div class="stat-num" id="st-total">0</div></div>
+    <div class="stat-card"><div class="stat-lbl">PASS</div><div class="stat-num green" id="st-pass">0</div></div>
+    <div class="stat-card"><div class="stat-lbl">HOLD/FAIL</div><div class="stat-num red" id="st-fail">0</div></div>
+    <div class="stat-card"><div class="stat-lbl">NC รอดำเนินการ</div><div class="stat-num amber" id="st-nc">0</div></div>
+  </div>
+
+  <div class="filter-row">
+    <div class="search-box">
+      <span class="search-icon">&#x1F50D;</span>
+      <input type="text" id="hist-search" placeholder="ค้นหา Doc No, Supplier, วัตถุดิบ..." oninput="renderHistory()">
+    </div>
+    <select id="hist-supplier" onchange="renderHistory()" style="min-width:180px">
+      <option value="">Supplier ทั้งหมด</option>
+    </select>
+    <input type="date" id="hist-date-from" onchange="renderHistory()">
+    <span style="font-size:13px;color:var(--gray3)">ถึง</span>
+    <input type="date" id="hist-date-to" onchange="renderHistory()">
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>Doc No</th><th>วันที่</th><th>Supplier</th><th>รายการ</th><th>อุณหภูมิรถ</th><th>ผล</th><th>NC</th><th>QA</th><th></th>
+      </tr></thead>
+      <tbody id="hist-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== PAGE: NC LOG ===== -->
+<div class="page" id="page-nc">
+  <div class="page-header">
+    <div>
+      <div class="page-title">NC Log — Non-Conformance</div>
+      <div class="page-subtitle">บันทึกสินค้าไม่ได้มาตรฐาน</div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openAddNC()">&#x2B; เพิ่ม NC</button>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>NC ID</th><th>Doc No</th><th>Supplier</th><th>ประเภทปัญหา</th><th>การแก้ไข</th><th>QA</th><th>สถานะ</th><th>วันที่ปิด</th><th>หมายเหตุ</th>
+      </tr></thead>
+      <tbody id="nc-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== PAGE: SAMPLING CALCULATOR ===== -->
+<div class="page" id="page-sampling">
+  <div class="page-header">
+    <div>
+      <div class="page-title">ตารางการสุ่มตัวอย่าง</div>
+      <div class="page-subtitle">อ้างอิง SD-QA-08 Rev.01 — แผนการสุ่มตัวอย่างวัตถุดิบหน้างาน</div>
+    </div>
+  </div>
+
+  <div class="calc-grid">
+    <!-- กลุ่มเนื้อสัตว์ -->
+    <div class="calc-card" style="border-top:3px solid #e24b4a">
+      <h3>&#x1F969; กลุ่มเนื้อสัตว์</h3>
+      <div class="subtitle">สุ่ม 10% ของจำนวนถุง</div>
+      <div class="form-group" style="margin-bottom:10px">
+        <label>ชนิด</label>
+        <select id="meat-type" onchange="calcMeat()">
+          <option value="12">มันสัน / สะโพก (บรรจุ 12 kg/ถุง)</option>
+          <option value="10">อกไก่ / เศษเนื้อ BB (บรรจุ 10 kg/ถุง)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>น้ำหนักรับเข้า (kg)</label>
+        <input type="number" id="meat-weight" step="0.1" placeholder="เช่น 240" oninput="calcMeat()">
+      </div>
+      <div class="calc-result" id="meat-result" style="display:none">
+        <div class="num" id="meat-result-num">0</div>
+        <div class="unit">ถุงที่ต้องสุ่มตรวจ</div>
+        <div style="font-size:12px;color:var(--teal);margin-top:4px" id="meat-result-desc"></div>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--gray3)">สูตร: (น้ำหนัก ÷ บรรจุ/ถุง) × 0.1</div>
+    </div>
+
+    <!-- กลุ่มไม้เสียบ -->
+    <div class="calc-card" style="border-top:3px solid #639922">
+      <h3>&#x1F333; กลุ่มไม้เสียบ</h3>
+      <div class="subtitle">สุ่ม 5% — บรรจุห่อใหญ่ 25 kg/ห่อ</div>
+      <div class="form-group">
+        <label>จำนวนห่อรับเข้า</label>
+        <input type="number" id="wood-qty" step="1" placeholder="เช่น 30" oninput="calcWood()">
+      </div>
+      <div class="calc-result" id="wood-result" style="display:none">
+        <div class="num" id="wood-result-num">0</div>
+        <div class="unit">ห่อที่ต้องเปิดตรวจ (สุ่มเปิด 3 จุด)</div>
+      </div>
+      <div style="margin-top:12px">
+        <div style="font-size:12px;color:var(--gray3);margin-bottom:8px">ตารางอ้างอิง</div>
+        <table style="font-size:12px">
+          <tr><th>จำนวนห่อ</th><th>สุ่มตรวจ</th></tr>
+          <tr><td>1–20 ห่อ</td><td>1</td></tr>
+          <tr><td>21–40 ห่อ</td><td>2</td></tr>
+          <tr><td>41–60 ห่อ</td><td>3</td></tr>
+          <tr><td>61–80 ห่อ</td><td>4</td></tr>
+          <tr><td>100 ห่อ</td><td>5</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- กลุ่มของแห้ง -->
+    <div class="calc-card" style="border-top:3px solid #e8900a">
+      <h3>&#x1F330; กลุ่มของแห้ง</h3>
+      <div class="subtitle">แป้ง, น้ำตาล, สีผสมอาหาร, สารปรุงแต่ง — สูตร √N+1</div>
+      <div class="form-group">
+        <label>จำนวนกระสอบ/ถุง ทั้งหมด (N)</label>
+        <input type="number" id="dry-qty" step="1" placeholder="เช่น 50" oninput="calcDry()">
+      </div>
+      <div class="calc-result" id="dry-result" style="display:none">
+        <div class="num" id="dry-result-num">0</div>
+        <div class="unit">กระสอบที่ต้องเปิดตรวจ</div>
+        <div style="font-size:12px;color:var(--teal);margin-top:4px" id="dry-result-desc"></div>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--gray3)">สูตร: √N + 1 (ปัดขึ้น)</div>
+    </div>
+
+    <!-- กลุ่มบรรจุภัณฑ์ -->
+    <div class="calc-card" style="border-top:3px solid #1565c0">
+      <h3>&#x1F4E6; กลุ่มบรรจุภัณฑ์ & เคมี</h3>
+      <div class="subtitle">ตรวจสอบตามมาตรฐาน AQL</div>
+      <div style="background:var(--blue-lt);border-radius:8px;padding:14px;font-size:13px;color:var(--blue)">
+        <div style="font-weight:600;margin-bottom:6px">&#x2714; AQL Inspection Level II</div>
+        <div>ตรวจสอบรูปทรง, ขนาด, สีและการพิมพ์,<br>ความสมบูรณ์ของบรรจุภัณฑ์</div>
+        <div style="margin-top:8px;font-size:12px">&#x26A0; หากพบสิ่งผิดปกติ ให้ HOLD สินค้า<br>และแจ้งหัวหน้าแผนก QA ทันที</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SD-QA-08 Reference Table -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">&#x1F4CB; ตารางอ้างอิง — กลุ่มเนื้อสัตว์ (สุ่ม 10%)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div>
+        <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:var(--red)">&#x1F969; มันสัน / สะโพก (12 kg/ถุง)</div>
+        <table style="font-size:13px;width:100%">
+          <tr><th>น้ำหนักรับ</th><th>จำนวนถุง</th><th>สุ่ม (ถุง)</th></tr>
+          <tr><td>120 kg</td><td>10 ถุง</td><td style="font-weight:700;color:var(--teal)">1</td></tr>
+          <tr><td>240 kg</td><td>20 ถุง</td><td style="font-weight:700;color:var(--teal)">2</td></tr>
+          <tr><td>600 kg</td><td>50 ถุง</td><td style="font-weight:700;color:var(--teal)">5</td></tr>
+          <tr><td>1,200 kg</td><td>100 ถุง</td><td style="font-weight:700;color:var(--teal)">10</td></tr>
+        </table>
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:var(--red)">&#x1F413; อกไก่ / เศษเนื้อ BB (10 kg/ถุง)</div>
+        <table style="font-size:13px;width:100%">
+          <tr><th>น้ำหนักรับ</th><th>จำนวนถุง</th><th>สุ่ม (ถุง)</th></tr>
+          <tr><td>100 kg</td><td>10 ถุง</td><td style="font-weight:700;color:var(--teal)">1</td></tr>
+          <tr><td>200 kg</td><td>20 ถุง</td><td style="font-weight:700;color:var(--teal)">2</td></tr>
+          <tr><td>500 kg</td><td>50 ถุง</td><td style="font-weight:700;color:var(--teal)">5</td></tr>
+          <tr><td>1,000 kg</td><td>100 ถุง</td><td style="font-weight:700;color:var(--teal)">10</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SAVE SUCCESS MODAL -->
+<div class="modal-overlay" id="save-modal">
+  <div class="modal-box">
+    <div class="modal-icon">&#x2705;</div>
+    <div class="modal-title">บันทึกเรียบร้อยแล้ว!</div>
+    <div class="modal-sub" id="modal-sub-text">บันทึกข้อมูลการรับวัตถุดิบสำเร็จ<br>ดาวน์โหลด Excel เพื่อเก็บข้อมูล</div>
+
+    <div class="sheet-preview">
+      <div style="font-size:11px;font-weight:600;color:var(--gray3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Sheets ที่จะสร้าง</div>
+      <div class="sheet-row"><div class="sheet-icon sheet-blue">H</div><div><strong>Receiving_Header</strong> + ลายเซ็น</div></div>
+      <div class="sheet-row"><div class="sheet-icon sheet-green">D</div><div><strong>Receiving_Detail</strong> — รายการวัตถุดิบทั้งหมด</div></div>
+      <div class="sheet-row"><div class="sheet-icon sheet-red">NC</div><div><strong>NC_Log</strong> — รายการ Non-Conformance</div></div>
+      <div class="sheet-row"><div class="sheet-icon sheet-amber">S</div><div><strong>Signatures</strong> — ลายเซ็นดิจิตอล</div></div>
+    </div>
+    <div id="desk-modal-sig" style="display:none;text-align:center;margin-bottom:16px">
+      <img id="desk-modal-sig-img" style="max-height:60px;border:1px solid var(--border);border-radius:8px;background:#fafbfc;padding:4px" alt="ลายเซ็น">
+      <div id="desk-modal-sig-name" style="font-size:13px;font-weight:600;color:var(--teal);margin-top:4px"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="downloadExcelAndClose()">&#x1F4E5; ดาวน์โหลด Excel</button>
+      <button class="btn btn-secondary" onclick="downloadPDFAndClose()" style="border-color:var(--red);color:var(--red)">&#x1F4C4; ดาวน์โหลด PDF</button>
+      <button class="btn btn-secondary" onclick="closeModal()">ข้ามไปก่อน</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD NC MODAL -->
+<div class="modal-overlay" id="nc-modal">
+  <div class="modal-box" style="text-align:left;max-width:520px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div style="font-size:18px;font-weight:600">&#x26A0; เพิ่ม NC ใหม่</div>
+      <button class="btn btn-secondary btn-icon" onclick="closeNCModal()">&#x2715;</button>
+    </div>
+    <div class="form-grid" style="gap:12px">
+      <div class="form-group">
+        <label>Doc No <span class="req">*</span></label>
+        <select id="nc-docno">
+          <option value="">-- เลือก Doc No --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Supplier</label>
+        <input type="text" id="nc-supplier-name" readonly placeholder="Auto จาก Doc No">
+      </div>
+      <div class="form-group">
+        <label>ประเภทปัญหา <span class="req">*</span></label>
+        <select id="nc-failtype">
+          <option value="">-- เลือกประเภท --</option>
+          <option>Quantity Mismatch</option>
+          <option>Missing Document</option>
+          <option>Temperature Out of Spec</option>
+          <option>Visual Defect</option>
+          <option>Packaging Damage</option>
+          <option>Expired / Near Expiry</option>
+          <option>Label Error</option>
+          <option>Foreign Matter</option>
+          <option>Rejected Material</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>QA Supervisor</label>
+        <input type="text" id="nc-qa" value="สุกพัฒน์">
+      </div>
+      <div class="form-group span2">
+        <label>การแก้ไข / Corrective Action</label>
+        <textarea id="nc-corrective" rows="2" placeholder="ระบุการดำเนินการแก้ไข..."></textarea>
+      </div>
+      <div class="form-group span2">
+        <label>หมายเหตุ</label>
+        <textarea id="nc-note" rows="2" placeholder="หมายเหตุเพิ่มเติม..."></textarea>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:20px;justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="closeNCModal()">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="saveNC()">&#x2B; บันทึก NC</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== DATA ====================
+const SUPPLIERS = [
+  {id:'SP0001',name:'บริษัท เบทาโกรเกษตรอุตสาหกรรม จำกัด (หมู)',type:'RM'},
+  {id:'SP0002',name:'บริษัท เบทาโกรเกษตรอุตสาหกรรม จำกัด (ไก่)',type:'RM'},
+  {id:'SP0003',name:'บริษัท เอส แอล พิทักษ์ จำกัด',type:'RM'},
+  {id:'SP0004',name:'บริษัท ฟู้ด จ๊อบ จำกัด',type:'RM'},
+  {id:'SP0005',name:'ร้าน ปายปายค้าข้าว',type:'DM'},
+  {id:'SP0006',name:'บริษัท ซีพีแอ็กซ์ตร้า จำกัด (มหาชน)',type:'DM'},
+  {id:'SP0007',name:'บริษัท หยั่นหว่อ หยุ่น คอร์ปอเรชั่น จำกัด',type:'DM'},
+  {id:'SP0008',name:'บริษัท ยิ่งเจริญ มงคลฟู้ดส์ จำกัด',type:'DM'},
+  {id:'SP0009',name:'บริษัท เดลี่ ฟู้ดส์ จำกัด',type:'DM'},
+  {id:'SP0010',name:'บริษัท เอ็น.อาร์.น้ำตาลมะพร้าว จำกัด',type:'DM'},
+  {id:'SP0011',name:'โรงงานน้ำตาลโชควาสนา',type:'DM'},
+  {id:'SP0012',name:'บริษัท จิมสกรุ๊ป จำกัด',type:'DM'},
+  {id:'SP0013',name:'บริษัท ไอ พลัส ซัพพลายส์ จำกัด',type:'DM'},
+  {id:'SP0014',name:'หจก.สหบุญญชาติ ฟลาวเซ็นเตอร์',type:'DM'},
+  {id:'SP0015',name:'ร้าน จูนีย์ (หอม-กระเทียม)',type:'DM'},
+  {id:'SP0016',name:'บริษัท เอส เอ โอ การเกษตร จำกัด',type:'DM'},
+  {id:'SP0017',name:'บริษัท กุยลิ้มซึ้ง จำกัด',type:'DM'},
+  {id:'SP0018',name:'บริษัท ตะวันพืชผล จำกัด',type:'DM'},
+  {id:'SP0019',name:'บริษัท อาหารเบทเทอร์ จำกัด',type:'DM'},
+  {id:'SP0020',name:'หจก.เชียงใหม่เบเกอร์มาร์ท',type:'DM'},
+  {id:'SP0021',name:'บริษัท อุทัยพลาสติก อุตสาหกรรม จำกัด',type:'PM'},
+  {id:'SP0022',name:'บริษัท เจเนอรัล เรคคอร์ด อินเตอร์ จำกัด',type:'PM'},
+  {id:'SP0023',name:'บริษัท บางกอก อินสทรูเมนท์ แอนด์เซอร์วิส จำกัด',type:'PM'},
+  {id:'SP0024',name:'บริษัท ศรีไม้ไผ่ทอง(2019) อุตสาหกรรม จำกัด',type:'PM'},
+  {id:'SP0025',name:'บริษัท ฟิวเจอร์ บิสซิเนส โซลูชั่น จำกัด',type:'PM'},
+  {id:'SP0026',name:'ห้างหุ้นส่วนจำกัด วี-ริน เคมีคอล',type:'CM'},
+  {id:'SP0027',name:'บริษัท เอ็นริช อินเตอร์เคมิคัล จำกัด',type:'CM'},
+  {id:'SP0028',name:'บริษัท ฟลุสสิค เคม จำกัด',type:'CM'},
+  {id:'SP0029',name:'บริษัท เบทเทอร์ ฟาร์มา จำกัด',type:'CM'},
+  {id:'SP0030',name:'บริษัท ออฟฟิศเมท (ไทย) จำกัด',type:'CM'},
+  {id:'SP0031',name:'บริษัท ท้อป เมาท์เทน จำกัด',type:'PM'},
+  {id:'SP0032',name:'บริษัท อี เค สลอเทอร์เฮาส์ จำกัด',type:'RM'},
+];
+
+const MATERIALS = [
+  {code:'RM0001',name:'สะโพกหมู',type:'RM',unit:'กิโลกรัม',minTemp:0,maxTemp:7,cat:'Pork'},
+  {code:'RM0002',name:'มันสันแข็ง',type:'RM',unit:'กิโลกรัม',minTemp:0,maxTemp:7,cat:'Pork'},
+  {code:'RM0004',name:'เศษบีบีติดหนัง',type:'RM',unit:'กิโลกรัม',minTemp:0,maxTemp:7,cat:'Chicken'},
+  {code:'RM0005',name:'อกไก่',type:'RM',unit:'กิโลกรัม',minTemp:0,maxTemp:7,cat:'Chicken'},
+  {code:'RM0006',name:'ข้าวสารเหนียว',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Rice'},
+  {code:'PD0001',name:'ซอสหอยนางรมหมู',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0002',name:'ซอสหอยนางรมไก่',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0003',name:'ซอสปรุงรสฝาเขียว',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0004',name:'ซีอิ้วขาว สูตร 1',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0005',name:'ซีอิ้วดำฉลากส้ม',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Ingredient'},
+  {code:'PD0006',name:'ซีอิ้วขาวเห็ดหอม',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0007',name:'ผงปรุงรส',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0008',name:'ผงชูรส',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0009',name:'แป้งท้าว',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0010',name:'เกลือ',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Ingredient'},
+  {code:'PD0011',name:'กระเทียม',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0012',name:'พริกไทยดำ',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0013',name:'พริกไทยขาว',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0014',name:'เมล็ดผักชี',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0015',name:'ผงขมิ้น',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0016',name:'ผงกระเทียม',type:'DM',unit:'กรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0017',name:'น้ำตาลมะพร้าวหมู',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Ingredient'},
+  {code:'PD0018',name:'น้ำตาลมะพร้าวไก่',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Ingredient'},
+  {code:'PD0019',name:'นมจืด',type:'DM',unit:'กระป๋อง',minTemp:null,maxTemp:null,cat:'Ingredient'},
+  {code:'PD0020',name:'สีส้มแดง',type:'DM',unit:'กรัม',minTemp:null,maxTemp:null,cat:'Additive'},
+  {code:'PD0021',name:'สีเหลืองไข่',type:'DM',unit:'กรัม',minTemp:null,maxTemp:null,cat:'Additive'},
+  {code:'PD0022',name:'โซดา',type:'DM',unit:'ขวด',minTemp:null,maxTemp:null,cat:'Additive'},
+  {code:'PD0023',name:'ฟอสเฟต',type:'DM',unit:'กรัม',minTemp:null,maxTemp:null,cat:'Additive'},
+  {code:'PD0024',name:'แป้งมัน',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Ingredient'},
+  {code:'PD0025',name:'วุ้นเส้น',type:'DM',unit:'กรัม',minTemp:null,maxTemp:null,cat:'Ingredient'},
+  {code:'PD0026',name:'ข้าวเจ้า',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Ingredient'},
+  {code:'PD0027',name:'ซอสบาร์บีคิว',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0028',name:'ซอสพริก',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0029',name:'เบคกิ้งโซดา',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Additive'},
+  {code:'PD0030',name:'ผงสามเกลอ',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0031',name:'พริกขี้หนูป่น',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0032',name:'ผงพริกหม่าล่า',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0033',name:'ผงกะหรี่',type:'DM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0034',name:'น้ำมันงา',type:'DM',unit:'ลิตร',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0035',name:'น้ำปลา',type:'DM',unit:'ลิตร',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0036',name:'ซอสโชยุ',type:'DM',unit:'กรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0037',name:'ซอสเทอริยากิ',type:'DM',unit:'กรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PD0038',name:'งาขาว',type:'DM',unit:'กรัม',minTemp:null,maxTemp:null,cat:'Seasoning'},
+  {code:'PG0001',name:'ถุงหูหิ้ว9*18',type:'PM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Packaging'},
+  {code:'PG0002',name:'ถุงหูหิ้ว12*20',type:'PM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Packaging'},
+  {code:'PG0003',name:'ถุงหูหิ้ว12*18',type:'PM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Packaging'},
+  {code:'PG0004',name:'ถุงใส6*9',type:'PM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Packaging'},
+  {code:'PG0005',name:'ถุงขยะดำ 24*28*20mm',type:'PM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Plastic Bag'},
+  {code:'PG0006',name:'ถุงขยะสีชา',type:'PM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Plastic Bag'},
+  {code:'PG0009',name:'รองเท้าบูทยางสีขาว เบอร์ 11',type:'PM',unit:'คู่',minTemp:null,maxTemp:null,cat:'Boots'},
+  {code:'PG0010',name:'รองเท้าบูทสีขาว เบอร์12',type:'PM',unit:'คู่',minTemp:null,maxTemp:null,cat:'Boots'},
+  {code:'PG0011',name:'เอี๋ยมน้ำเงิน',type:'PM',unit:'ผืน',minTemp:null,maxTemp:null,cat:'Aprons'},
+  {code:'PG0012',name:'ถุงมือยางสีน้ำเงิน/S',type:'PM',unit:'กล่อง',minTemp:null,maxTemp:null,cat:'Gloves'},
+  {code:'PG0013',name:'ถุงมือยางสีน้ำเงิน/M',type:'PM',unit:'กล่อง',minTemp:null,maxTemp:null,cat:'Gloves'},
+  {code:'PG0014',name:'ถุงมือยางสีน้ำเงิน/L',type:'PM',unit:'กล่อง',minTemp:null,maxTemp:null,cat:'Gloves'},
+  {code:'PK0001',name:'กล่องลูกฟูก5ชั้น ขนาด287*385*305',type:'PM',unit:'ใบ',minTemp:null,maxTemp:null,cat:'Packaging'},
+  {code:'PK0002',name:'กล่องลูกฟูก5ชั้น ขนาด23*40*21.2',type:'PM',unit:'ใบ',minTemp:null,maxTemp:null,cat:'Packaging'},
+  {code:'PK0003',name:'กล่องโฟม 25',type:'PM',unit:'ใบ',minTemp:null,maxTemp:null,cat:'Packaging'},
+  {code:'PK0004',name:'กล่องโฟม 3 กก',type:'PM',unit:'ใบ',minTemp:null,maxTemp:null,cat:'Packaging'},
+  {code:'PK0005',name:'ถุงHD A19*12(แผ่นแพ็ค)',type:'PM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Packaging'},
+  {code:'PK0006',name:'ถุงHD/A10*16หนา0.08มม.คู่ไม่พิมพ์โลโก้',type:'PM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Packaging'},
+  {code:'PK0007',name:'ถุงHD A10*16หนา พิมพ์โลโก้',type:'PM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Packaging'},
+  {code:'PK0010',name:'เทปใส',type:'PM',unit:'ม้วน',minTemp:null,maxTemp:null,cat:'Tape'},
+  {code:'PK0019',name:'ไม้กลม3*5',type:'PM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Skewer'},
+  {code:'PK0020',name:'ไม้กลม3*6',type:'PM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Skewer'},
+  {code:'PK0021',name:'ไม้กลม3*7',type:'PM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Skewer'},
+  {code:'PK0022',name:'ไม้ชายธงเบอร์6',type:'PM',unit:'ถุง',minTemp:null,maxTemp:null,cat:'Skewer'},
+  {code:'PK0026',name:'ถุงHD A10*16 พิมพ์ไก่พริกไทยดำ',type:'PM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Packaging'},
+  {code:'PK0027',name:'ถุงHD A10*16 พิมพ์ไก่แดง',type:'PM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Packaging'},
+  {code:'PK0028',name:'ถุงHD A10*16 พิมพ์ไก่นมสด',type:'PM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Packaging'},
+  {code:'PK0029',name:'ไม้กลม2.5*6',type:'PM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Skewer'},
+  {code:'CM0001',name:'CL - Liquid Soap',type:'CM',unit:'ลิตร',minTemp:null,maxTemp:null,cat:'Cleaning'},
+  {code:'CM0002',name:'SN - คลอรีนน้ำ 10%',type:'CM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Sanitizing'},
+  {code:'CM0003',name:'CL - Enrich D028',type:'CM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Cleaning'},
+  {code:'CM0004',name:'SN - ALCOHOL 75%',type:'CM',unit:'ลิตร',minTemp:null,maxTemp:null,cat:'Sanitizing'},
+  {code:'CM0006',name:'SN - QAC (Q-San M)',type:'CM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Sanitizing'},
+  {code:'CM0007',name:'CL - NEXGEN MP-1000',type:'CM',unit:'กิโลกรัม',minTemp:null,maxTemp:null,cat:'Cleaning'},
+];
+
+// Initial records from the Excel
+let records = [
+  {docNo:'FM-QA-31-20260318-001',date:'2026-03-18',time:'10:39',supplier:'SP0004',carReg:'4ฒฉ 8503',carTemp:2.3,inspector:'สุกพัฒน์',note:'',
+   materials:[
+     {code:'RM0004',name:'เศษบีบีติดหนัง',type:'RM',lot:'17.03.26',qty:100,unit:'กิโลกรัม',mfg:'2026-03-17',exp:'2026-03-22',t1:-1.2,t2:-1.5,t3:-1.3,visual:'PASS',leak:null,doc:'PASS',result:'PASS',note:''},
+     {code:'RM0005',name:'อกไก่',type:'RM',lot:'17.03.26',qty:300,unit:'กิโลกรัม',mfg:'2026-03-17',exp:'2026-03-22',t1:6.9,t2:6.4,t3:6.6,visual:'PASS',leak:null,doc:'PASS',result:'PASS',note:''},
+   ]},
+  {docNo:'FM-QA-31-20260318-002',date:'2026-03-18',time:'16:54',supplier:'SP0007',carReg:'',carTemp:null,inspector:'สุกพัฒน์',note:'',
+   materials:[
+     {code:'PD0004',name:'ซีอิ้วขาว สูตร 1',type:'DM',lot:'62261ABA2B',qty:10,unit:'แกลลอน',mfg:'2026-02-26',exp:'2027-08-26',t1:null,t2:null,t3:null,visual:'PASS',leak:null,doc:'PASS',result:'PASS',note:''},
+     {code:'PD0005',name:'ซีอิ้วดำฉลากส้ม',type:'DM',lot:'63022BAE3H',qty:10,unit:'แกลลอน',mfg:'2026-03-02',exp:'2027-09-02',t1:null,t2:null,t3:null,visual:'PASS',leak:null,doc:'PASS',result:'PASS',note:''},
+     {code:'PD0003',name:'ซอสปรุงรสฝาเขียว',type:'DM',lot:'61171AFA4B',qty:55,unit:'กล่อง',mfg:'2026-01-17',exp:'2027-07-17',t1:null,t2:null,t3:null,visual:'PASS',leak:null,doc:'PASS',result:'PASS',note:''},
+   ]},
+  {docNo:'FM-QA-31-20260323-001',date:'2026-03-23',time:'08:49',supplier:'SP0024',carReg:'',carTemp:null,inspector:'สุกพัฒน์',note:'มี COA แต่ใบ PO กับสินค้าจำนวนไม่ตรงกัน ขาดไป 40 กิโลกรัม',
+   materials:[
+     {code:'PK0019',name:'ไม้กลม3*5',type:'PM',lot:'17/03/2026',qty:500,unit:'กิโลกรัม',mfg:'2026-03-17',exp:'2026-06-17',t1:null,t2:null,t3:null,visual:'PASS',leak:null,doc:'PASS',result:'PASS',note:''},
+     {code:'PK0020',name:'ไม้กลม3*6',type:'PM',lot:'17/03/2026',qty:100,unit:'กิโลกรัม',mfg:'2026-03-17',exp:'2026-06-17',t1:null,t2:null,t3:null,visual:'PASS',leak:null,doc:'PASS',result:'PASS',note:''},
+   ]},
+  {docNo:'FM-QA-31-20260324-001',date:'2026-03-24',time:'11:17',supplier:'SP0004',carReg:'4ฒฉ 8503',carTemp:2.3,inspector:'สุกพัฒน์',note:'',
+   materials:[
+     {code:'RM0004',name:'เศษบีบีติดหนัง',type:'RM',lot:'23.03.26',qty:100,unit:'กิโลกรัม',mfg:'2026-03-23',exp:'2026-03-27',t1:2.4,t2:2.5,t3:1.5,visual:'PASS',leak:null,doc:'PASS',result:'PASS',note:''},
+     {code:'RM0005',name:'อกไก่',type:'RM',lot:'23.03.26',qty:500,unit:'กิโลกรัม',mfg:'2026-03-23',exp:'2026-03-27',t1:3.7,t2:3.5,t3:3.1,visual:'PASS',leak:null,doc:'PASS',result:'PASS',note:''},
+   ]},
+  {docNo:'FM-QA-31-20260402-001',date:'2026-04-02',time:'11:13',supplier:'SP0004',carReg:'4ฒฉ 8503',carTemp:1.7,inspector:'Sookapat',note:'เอกสารใบ รน. / ร.3 ไม่มี (นำส่ง 03/04/26)',
+   materials:[
+     {code:'RM0004',name:'เศษบีบีติดหนัง',type:'RM',lot:'01.04.26',qty:100,unit:'กิโลกรัม',mfg:'2026-04-01',exp:'2026-04-05',t1:-1.6,t2:-1.2,t3:null,visual:'PASS',leak:'PASS',doc:'PASS',result:'PASS',note:'ไม่มีใบเคลื่อนย้าย'},
+     {code:'RM0005',name:'อกไก่',type:'RM',lot:'01.04.26',qty:650,unit:'กิโลกรัม',mfg:'2026-04-01',exp:'2026-04-05',t1:0.7,t2:0.2,t3:0.1,visual:'PASS',leak:'PASS',doc:'PASS',result:'PASS',note:''},
+   ]},
+];
+
+let ncLogs = [
+  {id:'NC001',docNo:'FM-QA-31-20260323-001',supplier:'SP0024',failType:'Quantity Mismatch',corrective:'แจ้ง Supplier ตรวจสอบ PO',qa:'สุกพัฒน์',status:'Closed',closedDate:'2026-03-24',note:'Sup. นำส่งสินค้าที่ขาดส่งเรียบร้อย วันที่ 24/03/2026'},
+  {id:'NC002',docNo:'FM-QA-31-20260324-001',supplier:'SP0004',failType:'Missing Document',corrective:'แจ้งจัดซื้อ ติดตามครั้งที่ 2 เนื่องจาก พขร. ไม่ได้นำส่งวันที่ 24/03/26',qa:'สุกพัฒน์',status:'Closed',closedDate:'2026-03-25',note:'นำส่งเอกสารวันที่ 25/03/2026'},
+  {id:'NC003',docNo:'FM-QA-31-20260323-002',supplier:'SP0004',failType:'Missing Document',corrective:'พขร. แจ้งนำส่ง 24/03/26 แจ้งจัดซื้อติดตามครั้งที่ 1',qa:'สุกพัฒน์',status:'Closed',closedDate:'2026-03-25',note:'นำส่งเอกสารวันที่ 25/03/2026'},
+];
+
+// Current form materials array
+let currentMaterials = [];
+let matCounter = 0;
+
+// ==================== INIT ====================
+function init(){
+  // Set today's date and current time
+  const now = new Date();
+  document.getElementById('rcv-date').value = now.toISOString().split('T')[0];
+  document.getElementById('rcv-time').value = now.toTimeString().slice(0,5);
+  document.getElementById('rcv-docno').value = generateDocNo();
+
+  // Populate supplier dropdowns
+  const sel = document.getElementById('rcv-supplier');
+  const hsel = document.getElementById('hist-supplier');
+  SUPPLIERS.forEach(s=>{
+    sel.innerHTML += `<option value="${s.id}">${s.id} — ${s.name}</option>`;
+    hsel.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+  });
+
+  renderHistory();
+  renderNC();
+}
+
+function generateDocNo(){
+  const now=new Date();
+  const d=now.getFullYear().toString()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0');
+  const seq=String((parseInt(localStorage.getItem('fmqa31_seq_'+d)||'0')+1)).padStart(3,'0');
+  try{localStorage.setItem('fmqa31_seq_'+d,parseInt(seq));}catch(e){}
+  return 'FM-QA-31-'+d+'-'+seq;
+}
+
+// ==================== NAV ====================
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if(name==='history') renderHistory();
+  if(name==='nc') renderNC();
+}
+
+// ==================== SUPPLIER CHANGE ====================
+function onSupplierChange(){
+  const spId = document.getElementById('rcv-supplier').value;
+  const sp = SUPPLIERS.find(s=>s.id===spId);
+  if(sp){
+    document.getElementById('rcv-mattype').value = sp.type;
+    // Check temp spec for RM
+    updateCarTempStatus();
+  }
+}
+
+function updateCarTempStatus(){
+  const spId = document.getElementById('rcv-supplier').value;
+  const sp = SUPPLIERS.find(s=>s.id===spId);
+  const tempVal = parseFloat(document.getElementById('rcv-cartemp').value);
+  const statusEl = document.getElementById('cartemp-status');
+  if(!sp || isNaN(tempVal)){statusEl.innerHTML='';return;}
+  if(sp.type==='RM'){
+    if(tempVal>=0 && tempVal<=4){
+      statusEl.innerHTML = '<span class="temp-badge temp-pass">&#x2714; PASS (Spec: 0–4°C)</span>';
+    } else {
+      statusEl.innerHTML = '<span class="temp-badge temp-fail">&#x2716; FAIL (Spec: 0–4°C)</span>';
+    }
+  } else {
+    statusEl.innerHTML = '<span class="temp-badge temp-pass">&#x2714; N/A (ไม่กำหนด)</span>';
+  }
+}
+
+// ==================== SIGNATURE PAD ====================
+const deskSigState={empty:true,drawing:false};
+let deskSigRecords={};
+
+function initDeskSig(){
+  const canvas=document.getElementById('sig-canvas-d');
+  if(!canvas||canvas._sigInit) return;
+  canvas._sigInit=true;
+  const ctx=canvas.getContext('2d');
+  ctx.strokeStyle='#0f2744'; ctx.lineWidth=2; ctx.lineCap='round'; ctx.lineJoin='round';
+  const getPos=e=>{
+    const r=canvas.getBoundingClientRect();
+    const sx=canvas.width/r.width, sy=canvas.height/r.height;
+    const src=e.touches?e.touches[0]:e;
+    return {x:(src.clientX-r.left)*sx, y:(src.clientY-r.top)*sy};
+  };
+  const start=e=>{ e.preventDefault(); deskSigState.drawing=true; const p=getPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); markDeskSigned(); };
+  const move=e=>{ e.preventDefault(); if(!deskSigState.drawing) return; const p=getPos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); };
+  const end=()=>{ deskSigState.drawing=false; };
+  canvas.addEventListener('mousedown',start);
+  canvas.addEventListener('mousemove',move);
+  canvas.addEventListener('mouseup',end);
+  canvas.addEventListener('mouseleave',end);
+  canvas.addEventListener('touchstart',start,{passive:false});
+  canvas.addEventListener('touchmove',move,{passive:false});
+  canvas.addEventListener('touchend',end,{passive:false});
+  // Set sig name from inspector field
+  const inspEl=document.getElementById('rcv-inspector');
+  const sigNameEl=document.getElementById('desk-sig-name');
+  if(inspEl&&sigNameEl&&!sigNameEl.value) sigNameEl.value=inspEl.value;
+  updateDeskSigDT();
+}
+
+function updateDeskSigDT(){
+  const el=document.getElementById('desk-sig-dt');
+  if(el){ const now=new Date(); el.value=`${now.toLocaleDateString('th-TH')} ${now.toLocaleTimeString('th-TH')}`; }
+}
+
+function markDeskSigned(){
+  deskSigState.empty=false;
+  document.getElementById('sig-hint-d').classList.add('hidden');
+  document.getElementById('sig-wrap-d').classList.add('signed');
+  document.getElementById('sig-status-d').textContent='✓ เซ็นแล้ว';
+  document.getElementById('sig-status-d').className='sig-status sig-ok';
+  updateSigPreviewStrip();
+}
+
+function clearSig(id){
+  if(id==='d'){
+    const canvas=document.getElementById('sig-canvas-d');
+    canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
+    deskSigState.empty=true;
+    document.getElementById('sig-hint-d').classList.remove('hidden');
+    document.getElementById('sig-wrap-d').classList.remove('signed');
+    document.getElementById('sig-status-d').textContent='ยังไม่ได้เซ็น';
+    document.getElementById('sig-status-d').className='sig-status sig-empty';
+    document.getElementById('sig-preview-strip-d').style.display='none';
+  }
+}
+
+function updateSigPreviewStrip(){
+  const canvas=document.getElementById('sig-canvas-d');
+  const b64=canvas.toDataURL('image/png');
+  const name=document.getElementById('desk-sig-name').value||'—';
+  const dt=document.getElementById('desk-sig-dt').value||'';
+  document.getElementById('sig-preview-img-d').src=b64;
+  document.getElementById('sig-preview-name-d').textContent=name;
+  document.getElementById('sig-preview-dt-d').textContent=dt;
+  document.getElementById('sig-preview-strip-d').style.display='flex';
+}
+
+// Init sig pad when page loads
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('rcv-cartemp').addEventListener('input', updateCarTempStatus);
+  initDeskSig();
+  updateDeskSigDT();
+  setInterval(updateDeskSigDT, 30000);
+});
+
+// ==================== MATERIALS ====================
+function addMaterial(){
+  const idx = matCounter++;
+  currentMaterials.push({idx, code:'', lot:'', qty:'', unit:'', mfg:'', exp:'', t1:'', t2:'', t3:'', visual:'PASS', leak:'', doc:'PASS', result:'PASS', note:'', photo1:null, photo2:null});
+  renderMaterials();
+}
+
+function removeMaterial(idx){
+  currentMaterials = currentMaterials.filter(m=>m.idx!==idx);
+  renderMaterials();
+}
+
+function renderMaterials(){
+  const list = document.getElementById('material-list');
+  const tag = document.getElementById('mat-count-tag');
+  tag.textContent = currentMaterials.length + ' รายการ';
+
+  if(currentMaterials.length===0){
+    list.innerHTML = '';
+    return;
+  }
+
+  list.innerHTML = currentMaterials.map((m,i)=>{
+    const matInfo = MATERIALS.find(x=>x.code===m.code) || {};
+    const typeCls = 'type-'+(matInfo.type||'DM');
+    const typeLabel = matInfo.type||'';
+
+    // Temp validation
+    let t1cls='', t2cls='', t3cls='';
+    if(matInfo.minTemp!==null && matInfo.maxTemp!==null){
+      const checkT = v=>{
+        if(v==='')return '';
+        const n=parseFloat(v);
+        return (n>=matInfo.minTemp&&n<=matInfo.maxTemp)?'temp-pass':'temp-fail';
+      };
+      t1cls=checkT(m.t1); t2cls=checkT(m.t2); t3cls=checkT(m.t3);
+    }
+
+    const showTemp = matInfo.type==='RM';
+
+    // Sampling calc
+    let samplingHtml = '';
+    if(m.qty && m.code){
+      const s = calcSampling(m.code, parseFloat(m.qty));
+      if(s){
+        samplingHtml = `<div class="sampling-box"><div class="sampling-icon">&#x1F50D;</div><div class="sampling-info"><div class="sampling-label">จำนวนที่ต้องสุ่มตรวจ</div><div class="sampling-value">${s.n} ${s.unit}</div><div class="sampling-desc">${s.method}</div></div></div>`;
+      }
+    }
+
+    return `
+    <div class="material-item">
+      <div class="material-item-header" onclick="toggleMat(${m.idx})">
+        <div class="mat-num">${i+1}</div>
+        <div>
+          <div class="mat-name">${m.code ? m.code+' — '+matInfo.name : '— ยังไม่เลือกวัตถุดิบ —'}</div>
+          <div style="font-size:12px;color:var(--gray3);margin-top:2px">${m.qty?m.qty+' '+matInfo.unit:''} ${m.lot?'| Lot: '+m.lot:''}</div>
+        </div>
+        ${typeLabel?`<span class="mat-type-badge ${typeCls}">${typeLabel}</span>`:''}
+        <button class="btn btn-secondary btn-icon btn-sm" onclick="event.stopPropagation();removeMaterial(${m.idx})" title="ลบ">&#x2715;</button>
+      </div>
+      <div class="material-item-body open" id="matbody-${m.idx}">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>วัตถุดิบ <span class="req">*</span></label>
+            <select onchange="onMatSelect(${m.idx},this.value)">
+              <option value="">-- เลือกวัตถุดิบ --</option>
+              ${MATERIALS.map(x=>`<option value="${x.code}" ${x.code===m.code?'selected':''}>${x.code} — ${x.name}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Lot / Batch No <span class="req">*</span></label>
+            <input type="text" value="${m.lot}" placeholder="หมายเลข Lot" oninput="updateMat(${m.idx},'lot',this.value)">
+          </div>
+          <div class="form-group">
+            <label>จำนวนรับเข้า <span class="req">*</span></label>
+            <input type="number" value="${m.qty}" step="0.1" placeholder="ปริมาณ" oninput="updateMat(${m.idx},'qty',this.value)">
+          </div>
+          <div class="form-group">
+            <label>หน่วย</label>
+            <input type="text" value="${m.unit||matInfo.unit||''}" placeholder="หน่วย" oninput="updateMat(${m.idx},'unit',this.value)">
+          </div>
+          <div class="form-group">
+            <label>วันที่ผลิต (MFG)</label>
+            <input type="date" value="${m.mfg}" oninput="updateMat(${m.idx},'mfg',this.value)">
+          </div>
+          <div class="form-group">
+            <label>วันหมดอายุ (EXP)</label>
+            <input type="date" value="${m.exp}" oninput="updateMat(${m.idx},'exp',this.value)">
+          </div>
+        </div>
+
+        ${showTemp?`
+        <div style="margin-top:12px">
+          <label style="font-size:13px;font-weight:500;color:var(--gray4);display:block;margin-bottom:8px">อุณหภูมิ (Spec: ${matInfo.minTemp}–${matInfo.maxTemp}°C)</label>
+          <div class="temp-row">
+            <div class="temp-field">
+              <label>ครั้งที่ 1</label>
+              <input type="number" step="0.1" value="${m.t1}" placeholder="°C" oninput="updateMat(${m.idx},'t1',this.value)">
+              ${t1cls?`<span class="temp-badge ${t1cls}">${t1cls==='temp-pass'?'✓ Pass':'✗ Fail'}</span>`:''}
+            </div>
+            <div class="temp-field">
+              <label>ครั้งที่ 2</label>
+              <input type="number" step="0.1" value="${m.t2}" placeholder="°C" oninput="updateMat(${m.idx},'t2',this.value)">
+              ${t2cls?`<span class="temp-badge ${t2cls}">${t2cls==='temp-pass'?'✓ Pass':'✗ Fail'}</span>`:''}
+            </div>
+            <div class="temp-field">
+              <label>ครั้งที่ 3</label>
+              <input type="number" step="0.1" value="${m.t3}" placeholder="°C" oninput="updateMat(${m.idx},'t3',this.value)">
+              ${t3cls?`<span class="temp-badge ${t3cls}">${t3cls==='temp-pass'?'✓ Pass':'✗ Fail'}</span>`:''}
+            </div>
+          </div>
+        </div>`:''}
+
+        <div style="margin-top:14px">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;flex-wrap:wrap">
+            <div>
+              <div style="font-size:12px;font-weight:500;color:var(--gray4);margin-bottom:6px">Visual Check</div>
+              <div class="check-row" style="padding:0;gap:8px">
+                <label class="check-item"><input type="radio" name="visual-${m.idx}" value="PASS" ${m.visual==='PASS'?'checked':''} onchange="updateMat(${m.idx},'visual','PASS')"><span class="check-pill pass">PASS</span></label>
+                <label class="check-item"><input type="radio" name="visual-${m.idx}" value="FAIL" ${m.visual==='FAIL'?'checked':''} onchange="updateMat(${m.idx},'visual','FAIL')"><span class="check-pill fail">FAIL</span></label>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:500;color:var(--gray4);margin-bottom:6px">Leak Check</div>
+              <div class="check-row" style="padding:0;gap:8px">
+                <label class="check-item"><input type="radio" name="leak-${m.idx}" value="PASS" ${m.leak==='PASS'?'checked':''} onchange="updateMat(${m.idx},'leak','PASS')"><span class="check-pill pass">PASS</span></label>
+                <label class="check-item"><input type="radio" name="leak-${m.idx}" value="FAIL" ${m.leak==='FAIL'?'checked':''} onchange="updateMat(${m.idx},'leak','FAIL')"><span class="check-pill fail">FAIL</span></label>
+                <label class="check-item"><input type="radio" name="leak-${m.idx}" value="N/A" ${(!m.leak||m.leak==='N/A')?'checked':''} onchange="updateMat(${m.idx},'leak','N/A')"><span class="check-pill na">N/A</span></label>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:500;color:var(--gray4);margin-bottom:6px">Document Check</div>
+              <div class="check-row" style="padding:0;gap:8px">
+                <label class="check-item"><input type="radio" name="doc-${m.idx}" value="PASS" ${m.doc==='PASS'?'checked':''} onchange="updateMat(${m.idx},'doc','PASS')"><span class="check-pill pass">PASS</span></label>
+                <label class="check-item"><input type="radio" name="doc-${m.idx}" value="FAIL" ${m.doc==='FAIL'?'checked':''} onchange="updateMat(${m.idx},'doc','FAIL')"><span class="check-pill fail">FAIL</span></label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        ${samplingHtml}
+
+        <div class="form-group" style="margin-top:12px">
+          <label>ผลการตรวจรับ</label>
+          <div class="check-row" style="padding:0;gap:8px">
+            <label class="check-item"><input type="radio" name="result-${m.idx}" value="PASS" ${m.result==='PASS'?'checked':''} onchange="updateMat(${m.idx},'result','PASS')"><span class="check-pill pass">&#x2714; PASS — ผ่าน</span></label>
+            <label class="check-item"><input type="radio" name="result-${m.idx}" value="HOLD" ${m.result==='HOLD'?'checked':''} onchange="updateMat(${m.idx},'result','HOLD')"><span class="check-pill na">&#x23F8; HOLD — พักไว้</span></label>
+            <label class="check-item"><input type="radio" name="result-${m.idx}" value="REJECT" ${m.result==='REJECT'?'checked':''} onchange="updateMat(${m.idx},'result','REJECT')"><span class="check-pill fail">&#x2716; REJECT — ปฏิเสธ</span></label>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:10px">
+          <label>หมายเหตุ</label>
+          <input type="text" value="${m.note}" placeholder="หมายเหตุเพิ่มเติม" oninput="updateMat(${m.idx},'note',this.value)">
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleMat(idx){
+  const body = document.getElementById('matbody-'+idx);
+  if(body) body.classList.toggle('open');
+}
+
+function onMatSelect(idx, code){
+  const mat = MATERIALS.find(m=>m.code===code);
+  const cm = currentMaterials.find(m=>m.idx===idx);
+  if(cm){
+    cm.code = code;
+    cm.unit = mat ? mat.unit : '';
+  }
+  renderMaterials();
+}
+
+function updateMat(idx, field, value){
+  const m = currentMaterials.find(m=>m.idx===idx);
+  if(m){ m[field] = value; }
+  if(['t1','t2','t3','qty'].includes(field)) renderMaterials();
+}
+
+// Sampling calculation
+function calcSampling(code, qty){
+  const mat = MATERIALS.find(m=>m.code===code);
+  if(!mat) return null;
+
+  if(mat.type==='RM'){
+    // Meat group: 10%, bag size depends on material
+    const bagSize = (mat.cat==='Pork') ? 12 : 10;
+    const bags = Math.ceil(qty / bagSize);
+    const sample = Math.ceil(bags * 0.1);
+    return {n: Math.max(1,sample), unit:'ถุง', method:`สุ่ม 10% จาก ${bags} ถุง (${bagSize} kg/ถุง)`};
+  } else if(mat.cat==='Skewer'){
+    // Skewer/wood group: 5%
+    const packs = Math.ceil(qty / 25);
+    let sample = 1;
+    if(packs<=20) sample=1;
+    else if(packs<=40) sample=2;
+    else if(packs<=60) sample=3;
+    else if(packs<=80) sample=4;
+    else sample=5;
+    return {n: sample, unit:'ห่อ', method:`5% จาก ${packs} ห่อ (25 kg/ห่อ)`};
+  } else if(['DM','CM'].includes(mat.type)){
+    // Dry goods: sqrt(N)+1
+    const bags = Math.max(1, Math.ceil(qty));
+    const sample = Math.ceil(Math.sqrt(bags) + 1);
+    return {n: sample, unit:'กล่อง/ถุง', method:`สูตร √${bags}+1`};
+  }
+  return null;
+}
+
+// ==================== SAVE RECORD ====================
+function saveRecord(){
+  const date = document.getElementById('rcv-date').value;
+  const time = document.getElementById('rcv-time').value;
+  const supplier = document.getElementById('rcv-supplier').value;
+  const inspector = document.getElementById('rcv-inspector').value;
+
+  if(!date||!supplier||!inspector){
+    showToast('กรุณากรอกข้อมูลให้ครบ: วันที่, Supplier, ผู้ตรวจรับ','error');
+    return;
+  }
+  if(currentMaterials.length===0){
+    showToast('กรุณาเพิ่มรายการวัตถุดิบอย่างน้อย 1 รายการ','error');
+    return;
+  }
+
+  if(deskSigState.empty){
+    showToast('กรุณาเซ็นชื่อก่อนบันทึก','error');
+    document.getElementById('sec-signature').scrollIntoView({behavior:'smooth'});
+    return;
+  }
+
+  const docNo = document.getElementById('rcv-docno').value || generateDocNo();
+  const sigCanvas=document.getElementById('sig-canvas-d');
+  const sigBase64=sigCanvas?sigCanvas.toDataURL('image/png'):null;
+  const sigName=document.getElementById('desk-sig-name').value||inspector;
+  const sigDt=document.getElementById('desk-sig-dt').value||new Date().toLocaleString('th-TH');
+
+  const rec = {
+    docNo, date, time,
+    supplier,
+    carReg: document.getElementById('rcv-car').value,
+    carTemp: parseFloat(document.getElementById('rcv-cartemp').value)||null,
+    inspector,
+    note: document.getElementById('rcv-note').value,
+    materials: currentMaterials.map(m=>({...m})),
+    sig:{signerName:sigName, signedAt:sigDt, sigBase64}
+  };
+  deskSigRecords[docNo]={signerName:sigName,signedAt:sigDt,sigBase64};
+  records.unshift(rec);
+  _lastRec = rec;
+  cloudSaveRecord(rec).catch(()=>{});
+
+  // Auto-create NC if any material result is not PASS
+  let ncCreated = false;
+  rec.materials.forEach(m=>{
+    if(m.result==='HOLD'||m.result==='REJECT'){
+      const nc = {
+        id: 'NC'+(ncLogs.length+1).toString().padStart(3,'0'),
+        docNo: rec.docNo,
+        supplier: rec.supplier,
+        failType: m.result==='REJECT'?'Rejected Material':'Hold — Pending Investigation',
+        corrective: '—',
+        qa: rec.inspector,
+        status: 'Open',
+        closedDate: '',
+        note: m.note || (m.code+' — '+m.result)
+      };
+      ncLogs.unshift(nc);
+      cloudSaveNC(nc).catch(()=>{});
+      ncCreated = true;
+    }
+  });
+
+  updateNCBadge();
+  clearForm();
+
+  // Show signature preview in modal
+  const sigMod=document.getElementById('desk-modal-sig');
+  const sigImg=document.getElementById('desk-modal-sig-img');
+  const sigNm=document.getElementById('desk-modal-sig-name');
+  if(rec.sig&&rec.sig.sigBase64){
+    sigImg.src=rec.sig.sigBase64; sigNm.textContent='✓ '+rec.sig.signerName; sigMod.style.display='block';
+  } else { sigMod.style.display='none'; }
+
+  // Show save modal
+  const subText = `Doc No: <strong>${docNo}</strong> | ${rec.materials.length} รายการ${ncCreated?' | สร้าง NC อัตโนมัติ':''}`;
+  document.getElementById('modal-sub-text').innerHTML = 'บันทึกข้อมูลการรับวัตถุดิบสำเร็จ<br>' + subText;
+  document.getElementById('save-modal').classList.add('open');
+}
+
+function closeModal(){
+  document.getElementById('save-modal').classList.remove('open');
+}
+
+function downloadExcelAndClose(){
+  exportExcel();
+  closeModal();
+}
+
+// ==================== EXPORT EXCEL ====================
+function clearForm(){
+  document.getElementById('rcv-docno').value = generateDocNo();
+  document.getElementById('rcv-supplier').value = '';
+  document.getElementById('rcv-mattype').value = '';
+  document.getElementById('rcv-car').value = '';
+  document.getElementById('rcv-cartemp').value = '';
+  document.getElementById('rcv-note').value = '';
+  document.getElementById('cartemp-status').innerHTML = '';
+  currentMaterials = [];
+  matCounter = 0;
+  renderMaterials();
+  clearSig('d');
+  deskSigState.empty = true;
+  document.getElementById('desk-sig-name').value = '';
+  updateDeskSigDT();
+  const now = new Date();
+  document.getElementById('rcv-time').value = now.toTimeString().slice(0,5);
+}
+
+// ==================== HISTORY ====================
+function renderHistory(){
+  const search = (document.getElementById('hist-search').value||'').toLowerCase();
+  const filterSup = document.getElementById('hist-supplier').value;
+  const dateFrom = document.getElementById('hist-date-from').value;
+  const dateTo = document.getElementById('hist-date-to').value;
+
+  let filtered = records.filter(r=>{
+    const sp = SUPPLIERS.find(s=>s.id===r.supplier)||{};
+    const matchSearch = !search || r.docNo.includes(search)||sp.name.toLowerCase().includes(search)||
+      r.materials.some(m=>m.name&&m.name.toLowerCase().includes(search));
+    const matchSup = !filterSup||r.supplier===filterSup;
+    const matchFrom = !dateFrom||r.date>=dateFrom;
+    const matchTo = !dateTo||r.date<=dateTo;
+    return matchSearch&&matchSup&&matchFrom&&matchTo;
+  });
+
+  const tbody = document.getElementById('hist-tbody');
+  if(filtered.length===0){
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--gray3)">ไม่พบข้อมูล</td></tr>`;
+  } else {
+    tbody.innerHTML = filtered.map(r=>{
+      const sp = SUPPLIERS.find(s=>s.id===r.supplier)||{name:r.supplier};
+      const allPass = r.materials.every(m=>m.result==='PASS');
+      const hasNC = ncLogs.some(nc=>nc.docNo===r.docNo);
+      const resultHtml = allPass
+        ? '<span class="pill pill-pass">PASS</span>'
+        : r.materials.some(m=>m.result==='REJECT')
+          ? '<span class="pill pill-fail">REJECT</span>'
+          : '<span class="pill pill-pending">HOLD</span>';
+      const tempHtml = r.carTemp!==null && r.carTemp!==undefined
+        ? `<span style="font-weight:500">${r.carTemp}°C</span>`
+        : '<span style="color:var(--gray3)">—</span>';
+      return `<tr>
+        <td><span class="doc-no">${r.docNo.slice(0,8)}</span></td>
+        <td>${r.date}</td>
+        <td style="font-size:13px">${sp.name}</td>
+        <td>${r.materials.length} รายการ</td>
+        <td>${tempHtml}</td>
+        <td>${resultHtml}</td>
+        <td>${hasNC?'<span class="pill pill-open">NC</span>':'<span style="color:var(--gray3)">—</span>'}</td>
+        <td style="font-size:13px">${r.inspector}</td>
+        <td><button class="btn btn-secondary btn-sm" onclick="viewRecord('${r.docNo}')">&#x1F441; ดู</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Stats
+  const all = records;
+  document.getElementById('st-total').textContent = all.length;
+  document.getElementById('st-pass').textContent = all.filter(r=>r.materials.every(m=>m.result==='PASS')).length;
+  document.getElementById('st-fail').textContent = all.filter(r=>r.materials.some(m=>m.result!=='PASS')).length;
+  document.getElementById('st-nc').textContent = ncLogs.filter(nc=>nc.status==='Open').length;
+}
+
+function viewRecord(docNo){
+  const r = records.find(x=>x.docNo===docNo);
+  if(!r) return;
+  const sp = SUPPLIERS.find(s=>s.id===r.supplier)||{name:r.supplier};
+  const mats = r.materials.map(m=>{
+    const rc = m.result==='PASS'?'pass':'fail';
+    const t = [m.t1,m.t2,m.t3].filter(x=>x!==''&&x!==null&&x!==undefined);
+    return `<tr><td>${m.code}</td><td>${m.name}</td><td>${m.qty} ${m.unit}</td><td>${m.lot}</td><td>${t.length?t.join(', '):'N/A'}</td><td><span class="pill pill-${rc}">${m.result}</span></td></tr>`;
+  }).join('');
+  const html = `<div style="padding:20px;font-family:Sarabun,sans-serif">
+    <h3 style="margin-bottom:12px">เอกสาร: ${r.docNo}</h3>
+    <p><strong>วันที่:</strong> ${r.date} ${r.time} | <strong>Supplier:</strong> ${sp.name}</p>
+    <p><strong>รถ:</strong> ${r.carReg||'—'} | <strong>อุณหภูมิรถ:</strong> ${r.carTemp||'—'}°C</p>
+    <p><strong>QA:</strong> ${r.inspector} | <strong>หมายเหตุ:</strong> ${r.note||'—'}</p>
+    <hr style="margin:12px 0">
+    <table width="100%" style="font-size:13px;border-collapse:collapse">
+      <tr style="background:#f4f5f7"><th>Code</th><th>ชื่อ</th><th>ปริมาณ</th><th>Lot</th><th>Temp (°C)</th><th>ผล</th></tr>
+      ${mats}
+    </table>
+  </div>`;
+  const w = window.open('','_blank','width=700,height=500');
+  w.document.write(html);
+}
+
+// ==================== NC LOG ====================
+function renderNC(){
+  const tbody = document.getElementById('nc-tbody');
+  if(ncLogs.length===0){
+    tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--gray3)">ไม่มีรายการ NC</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = ncLogs.map(nc=>{
+    const sp = SUPPLIERS.find(s=>s.id===nc.supplier)||{name:nc.supplier||'—'};
+    const stCls = nc.status==='Closed'?'pill-closed':'pill-open';
+    return `<tr class="${nc.status!=='Closed'?'nc-row':''}">
+      <td><span class="doc-no">${nc.id}</span></td>
+      <td><span class="doc-no">${nc.docNo.slice(0,8)}</span></td>
+      <td style="font-size:12px">${sp.name}</td>
+      <td><span class="pill pill-fail" style="font-size:11px">${nc.failType}</span></td>
+      <td style="font-size:12px;max-width:200px">${nc.corrective}</td>
+      <td>${nc.qa}</td>
+      <td><span class="pill ${stCls}">${nc.status}</span></td>
+      <td style="font-size:12px">${nc.closedDate||'—'}</td>
+      <td style="font-size:12px;color:var(--gray3)">${nc.note}</td>
+    </tr>`;
+  }).join('');
+  updateNCBadge();
+}
+
+function openAddNC(){
+  // Populate doc no dropdown
+  const sel = document.getElementById('nc-docno');
+  sel.innerHTML = '<option value="">-- เลือก Doc No --</option>';
+  records.forEach(r=>{
+    const sp = SUPPLIERS.find(s=>s.id===r.supplier)||{name:r.supplier};
+    sel.innerHTML += `<option value="${r.docNo}" data-supplier="${r.supplier}" data-spname="${sp.name}">${r.docNo.slice(0,8)} — ${r.date} — ${sp.name}</option>`;
+  });
+  sel.onchange = function(){
+    const opt = sel.options[sel.selectedIndex];
+    document.getElementById('nc-supplier-name').value = opt.dataset.spname||'';
+    document._ncSupplierId = opt.dataset.supplier||'';
+  };
+  // Reset fields
+  document.getElementById('nc-failtype').value = '';
+  document.getElementById('nc-corrective').value = '';
+  document.getElementById('nc-note').value = '';
+  document.getElementById('nc-supplier-name').value = '';
+  document._ncSupplierId = '';
+  document.getElementById('nc-modal').classList.add('open');
+}
+
+function closeNCModal(){
+  document.getElementById('nc-modal').classList.remove('open');
+}
+
+function saveNC(){
+  const docNo = document.getElementById('nc-docno').value;
+  const failType = document.getElementById('nc-failtype').value;
+  if(!docNo){ showToast('กรุณาเลือก Doc No','error'); return; }
+  if(!failType){ showToast('กรุณาเลือกประเภทปัญหา','error'); return; }
+  const nc = {
+    id: 'NC'+(ncLogs.length+1).toString().padStart(3,'0'),
+    docNo,
+    supplier: document._ncSupplierId||'',
+    failType,
+    corrective: document.getElementById('nc-corrective').value||'—',
+    qa: document.getElementById('nc-qa').value||'สุกพัฒน์',
+    status: 'Open',
+    closedDate: '',
+    note: document.getElementById('nc-note').value||''
+  };
+  ncLogs.unshift(nc);
+  renderNC();
+  closeNCModal();
+  showToast('สร้าง NC เรียบร้อย ✓','success');
+}
+
+function updateNCBadge(){
+  const open = ncLogs.filter(nc=>nc.status==='Open').length;
+  document.getElementById('nc-count').textContent = ncLogs.length;
+}
+
+// ==================== SAMPLING CALC ====================
+function calcMeat(){
+  const bagSize = parseInt(document.getElementById('meat-type').value);
+  const weight = parseFloat(document.getElementById('meat-weight').value);
+  const resEl = document.getElementById('meat-result');
+  if(isNaN(weight)||weight<=0){resEl.style.display='none';return;}
+  const bags = Math.ceil(weight/bagSize);
+  const sample = Math.max(1,Math.ceil(bags*0.1));
+  document.getElementById('meat-result-num').textContent = sample;
+  document.getElementById('meat-result-desc').textContent = `= ${bags} ถุง × 10% = ${sample} ถุง (ปัดขึ้น)`;
+  resEl.style.display='block';
+}
+
+function calcWood(){
+  const packs = parseInt(document.getElementById('wood-qty').value);
+  const resEl = document.getElementById('wood-result');
+  if(isNaN(packs)||packs<=0){resEl.style.display='none';return;}
+  let sample = 1;
+  if(packs<=20) sample=1;
+  else if(packs<=40) sample=2;
+  else if(packs<=60) sample=3;
+  else if(packs<=80) sample=4;
+  else sample=5;
+  document.getElementById('wood-result-num').textContent = sample;
+  resEl.style.display='block';
+}
+
+function calcDry(){
+  const n = parseInt(document.getElementById('dry-qty').value);
+  const resEl = document.getElementById('dry-result');
+  if(isNaN(n)||n<=0){resEl.style.display='none';return;}
+  const sample = Math.ceil(Math.sqrt(n)+1);
+  document.getElementById('dry-result-num').textContent = sample;
+  document.getElementById('dry-result-desc').textContent = `= √${n} + 1 = ${Math.sqrt(n).toFixed(2)} + 1 ≈ ${sample}`;
+  resEl.style.display='block';
+}
+
+// ==================== EXPORT CSV ====================
+function exportCSV(){
+  let csv = 'Doc No,วันที่,เวลา,Supplier,ทะเบียนรถ,อุณหภูมิรถ,วัตถุดิบ,Lot,จำนวน,หน่วย,Temp1,Temp2,Temp3,Visual,Leak,Document,ผล,QA,ผู้เซ็น,เซ็นเมื่อ\n';
+  records.forEach(r=>{
+    const sp = SUPPLIERS.find(s=>s.id===r.supplier)||{name:r.supplier};
+    r.materials.forEach(m=>{
+      csv += [r.docNo,r.date,r.time,sp.name,r.carReg||'',r.carTemp||'',
+        m.code+' '+m.name,m.lot,m.qty,m.unit,
+        m.t1||'',m.t2||'',m.t3||'',m.visual||'',m.leak||'',m.doc||'',m.result||'',r.inspector,
+        r.sig?.signerName||'', r.sig?.signedAt||''
+      ].map(v=>`"${v}"`).join(',')+'\n';
+    });
+  });
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='QA_Receiving_Export.csv'; a.click();
+}
+
+// ==================== EXPORT EXCEL ====================
+function exportExcel(){
+  const wb = XLSX.utils.book_new();
+
+  /* Sheet 1: Receiving_Header */
+  const hd=[['Doc_No','Date','Time','Supplier_ID','Supplier_Name','Car_Registration','Car_Temp(°C)','QA_Inspector','หมายเหตุ','Signer','Signed_At','Signed']];
+  records.forEach(r=>{
+    const sp=SUPPLIERS.find(s=>s.id===r.supplier)||{name:r.supplier};
+    hd.push([r.docNo,r.date,r.time,r.supplier,sp.name,r.carReg||'',r.carTemp??'',r.inspector,r.note||'',
+      r.sig?.signerName||'', r.sig?.signedAt||'', r.sig?.signerName?'YES':'NO']);
+  });
+  const wsH=XLSX.utils.aoa_to_sheet(hd);
+  wsH['!cols']=[18,12,8,10,35,14,12,20,30,20,22,8].map(w=>({wch:w}));
+  styleHdr(wsH,hd[0].length);
+  XLSX.utils.book_append_sheet(wb,wsH,'Receiving_Header');
+
+  /* Sheet 2: Receiving_Detail */
+  const det=[['Detail_ID','Doc_No','Date','Supplier_Name','Material_Code','Material_Name','Type','Lot_No','จำนวน','หน่วย','MFG','EXP','Temp1','Temp2','Temp3','Avg_Temp','Temp_Status','Visual','Leak','Document','ผลการตรวจ','หมายเหตุ']];
+  records.forEach(r=>{
+    const sp=SUPPLIERS.find(s=>s.id===r.supplier)||{name:r.supplier};
+    (r.materials||[]).forEach((m,i)=>{
+      const mi=MATERIALS.find(x=>x.code===m.code)||{};
+      const ts=[m.t1,m.t2,m.t3].map(t=>parseFloat(t)).filter(t=>!isNaN(t));
+      const avg=ts.length?(ts.reduce((a,b)=>a+b,0)/ts.length).toFixed(1):'';
+      let tst=''; if(ts.length&&mi.minTemp!=null){tst=ts.every(t=>t>=mi.minTemp&&t<=mi.maxTemp)?'PASS':'FAIL';}
+      det.push([r.docNo+'_'+(i+1).toString().padStart(2,'0'),r.docNo,r.date,sp.name,
+        m.code,m.name||'',mi.type||mi.Material_Type||'',m.lot||'',m.qty||'',m.unit||'',m.mfg||'',m.exp||'',
+        m.t1??'',m.t2??'',m.t3??'',avg,tst,m.visual||'',m.leak||'',m.doc||'',m.result||'',m.note||'']);
+    });
+  });
+  const wsD=XLSX.utils.aoa_to_sheet(det);
+  wsD['!cols']=[16,12,12,24,10,18,6,14,10,8,12,12,10,10,10,10,10,8,8,10,8,20].map(w=>({wch:w}));
+  styleHdr(wsD,det[0].length);
+  XLSX.utils.book_append_sheet(wb,wsD,'Receiving_Detail');
+
+  /* Sheet 3: NC_Log */
+  const nc=[['NC_ID','Doc_No','Supplier_ID','Supplier_Name','Fail_Type','Corrective_Action','QA','Status','Closed_Date','หมายเหตุ']];
+  ncLogs.forEach(n=>{
+    const sp=SUPPLIERS.find(s=>s.id===n.supplier)||{name:n.supplier||'—'};
+    nc.push([n.id,n.docNo,n.supplier,sp.name,n.failType,n.corrective,n.qa,n.status,n.closedDate||'',n.note||'']);
+  });
+  const wsNC=XLSX.utils.aoa_to_sheet(nc);
+  wsNC['!cols']=[8,12,10,28,20,35,14,8,12,30].map(w=>({wch:w}));
+  styleHdr(wsNC,nc[0].length);
+  XLSX.utils.book_append_sheet(wb,wsNC,'NC_Log');
+
+  /* Sheet 4: Signatures */
+  const sigData=[['Doc_No','Date','QA_Inspector','Signer_Name','Signed_At','Signed_Electronically','Verified','Signature_Image_(Base64_PNG)']];
+  records.forEach(r=>{
+    const sig=r.sig||deskSigRecords[r.docNo]||{};
+    sigData.push([
+      r.docNo, r.date, r.inspector,
+      sig.signerName||r.inspector||'',
+      sig.signedAt||'',
+      sig.signerName?'YES — Electronically Signed':'NOT SIGNED',
+      sig.signerName?'✓':'—',
+      sig.sigBase64||''
+    ]);
+  });
+  const wsSig=XLSX.utils.aoa_to_sheet(sigData);
+  wsSig['!cols']=[14,12,20,20,22,26,8,60].map(w=>({wch:w}));
+  styleHdr(wsSig,sigData[0].length);
+  // Color signed rows
+  sigData.forEach((row,ri)=>{
+    if(ri===0) return;
+    const cell=XLSX.utils.encode_cell({r:ri,c:5});
+    if(wsSig[cell]){
+      wsSig[cell].s = row[5]==='NOT SIGNED'
+        ? {font:{bold:true,color:{rgb:'B71C1C'}},fill:{fgColor:{rgb:'FFCDD2'}}}
+        : {font:{bold:true,color:{rgb:'1B5E20'}},fill:{fgColor:{rgb:'C8E6C9'}}};
+    }
+  });
+  XLSX.utils.book_append_sheet(wb,wsSig,'Signatures');
+
+  /* Sheet 5: Material_Master */
+  const mat=[['Material_Code','Material_Name','Type','Category','Unit','Min_Temp','Max_Temp','Risk']];
+  MATERIALS.forEach(m=>{ const risk=m.type==='RM'?'High':m.type==='CM'?'Medium':'Low'; mat.push([m.code,m.name,m.type,m.cat,m.unit,m.minTemp??'',m.maxTemp??'',risk]); });
+  const wsMat=XLSX.utils.aoa_to_sheet(mat);
+  wsMat['!cols']=[12,28,6,14,12,10,10,8].map(w=>({wch:w}));
+  styleHdr(wsMat,mat[0].length);
+  XLSX.utils.book_append_sheet(wb,wsMat,'Material_Master');
+
+  /* Sheet 6: Supplier_Master */
+  const sp2=[['Supplier_ID','Supplier_Name','Type']];
+  SUPPLIERS.forEach(s=>sp2.push([s.id,s.name,s.type]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sp2),'Supplier_Master');
+
+  const now=new Date();
+  const stamp=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+  XLSX.writeFile(wb,`QA_Receiving_${stamp}.xlsx`);
+  showToast('ดาวน์โหลด Excel เรียบร้อย ✓','success');
+}
+
+function styleHdr(ws,colCount){
+  for(let c=0;c<colCount;c++){
+    const cell=XLSX.utils.encode_cell({r:0,c});
+    if(!ws[cell]) continue;
+    ws[cell].s={font:{bold:true,color:{rgb:'FFFFFF'},sz:11},fill:{fgColor:{rgb:'0F2744'}},alignment:{horizontal:'center',vertical:'center',wrapText:true},border:{bottom:{style:'medium',color:{rgb:'1D9E75'}}}};
+  }
+  ws['!rows']=[{hpt:22}];
+}
+
+// ==================== TOAST ====================
+function showToast(msg, type=''){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show '+(type||'');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+
+// ==================== LOGO ====================
+const LOGO_B64="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCABZAHcDASIAAhEBAxEB/8QAHAABAAICAwEAAAAAAAAAAAAAAAYHBAUBAgMI/8QAOxAAAQMDAgMFBAgEBwAAAAAAAQIDBAAFEQYSITFBBxNRYXEiMoGRFBUjQlKhwdEkM7HwCDdTYoKDs//EABsBAAEFAQEAAAAAAAAAAAAAAAABAgMEBgUH/8QALhEAAQQBAwMBBgcBAAAAAAAAAQACAxEEEiExBRNRQQYiMpHR4RRCYYGhscHx/9oADAMBAAIRAxEAPwD7LpSlCEpSlCErqtYSMk4rHuExmFEckvr2NtjJNU12h6temuqiTZT8aMr3bfFV9q4PF1X3c/hFV8jJZALcoJp2xCyrAv3aPpS0OqZduSH30nBbjjvCD4HHAfOtAe2SyFeEW6apPido/WqkFxQwdkSyQYyehca7xXzVXs1PddUA7Cgrz0DAT/TFZ7J65I34QAud+NkcdjX7K87P2iaeuKUlTrkUq/1k4HzFSuNIZktpdZcQ42oZSpJyDVAx2YK2kp7tUVYHMHcnP9RWwt14uem5KFsvYYWRkE5bV/fjSR+0WhwEoseR9FbiyH/mV50rS6Vv8a+we+Z9h5B2vNE8UK/bwrdCtNFKyVoew2CrgNiwlcEAkHjw865pUiVKUpQhKUpQhK4JxXNdH1BDalnkBk0hNBCiutJCpJ+gNL2bSCpQHEHpitJb7XAtoKY8dsPK4uuEZWo+ZPE1gDVFtkXOQ+4XUhKlKypHDngcqz4kpl9PetOpcSfvJOayeVlRZLyWPBKqag42VkvMsSGyh9ltxB6LSCK1Uzs9afZVPtzfcODilk8lenhUusdrU9iRISQ3zSnx86kiUAJA6DlUmJ0YTAum49PqpjG143CodMdbSy24goWg4UlQwQa4nISq2vsrG5BQTx6EDmKs/WGmk3BKpkRITJSOI5BY/eqzvJVHhuNLSUuK9gpVzHjWN6phT4M+l3B4PlQuj0Arw0dfXbJco1wKj3QWGJQ/Eg8leoq/GlpW2laSClQyCOor5raR/BykHltSR65q9uzyWqZpC3urOVpa2H/jwrUeyuW52uA8Dcf6lxnHhSGlKVs1aSlKUISlKUISvGakriuoHNSCPyr2rhYyKRwsUhfNwyhuaDwUl0JPzP7VsNLvvszw8yohCMFST7qvI1la5tS7Zqi5xNpDclP0hg9DxyR8DkViac4QlrH3l/pXj2ZHJizPA2IK57RT6KujTd7j3SPhGG3kD22yeXmPKt2KpGJOfgSkSY6ylxB+fkas3T+poVzgF0rS282PtGieIPl4it10Lroyo9E5p4/lXGyA7LdTH2o7JcdVtSKrjVsBi9yFPkBlY91Q/Wt7cpjkx4qUcIHuprBUgrO0A7jyFR5+WzNPbq2pJN1ApWnrlHiulLQdStQSChQ4448j8Ktbs2ivwtJRGZDZbc9pRSemTWkWjv5DURo7jnA8yeZqdxGgzGbaTyQkJFT9F6ZFjyOlYT4UcLaNr2pSlaVWUpSlCEpSlCEpSlCFGNfacF9t6VsbUzoxK2Fnr4pPkaqOEF26Y9EktLQ2tWSg8FNL6j++dfQRx1rRak0zbr0kqeb7t/GA6jgr4+NZ3rHRBmHux7O/tQSxajqHKqOS06Ed61h5r8SOnqOYqPzri8xJCo7q2lNn3knHGp5ddD6igOly3qTJSOSml7F/EH96iEm16vDqkvabfkKJPFcTdn4is8ekSxUNBBXPlD74K7xO0G4xkhMhlmTjqcpP5Vs2NW3u5NFcaFGtsUfzJkknakeWcZPlWPaNJa3mugM2G3WxJ5uyG0jHw4n8qsXS3Z9Hgvtzr3Ncu85HFBcGGmz/ALUcvjXXw+lyndwpETch+xJr5fde3Z5a3kMC4yO9PeD7NTwwtwfjI+6D0HhU0HKuqEgDlXatPDC2Jmlq6jG6RSUpSpU9KUpQhKjuv9QjTOnnbkGe+c3BDaM4BUfHyqRVo9ax7LLsi41+cQ3EcUE71K24Vnhg9DUU+rtnSaKZJek1yq+s+qu0a5xE3KFbIEmKo5CEqTux6bs1lai1tfbNq23RZbLTMCUhtakKR7ac8FDPkaiWtLHE0k3Hn6e1G44XHcBlLg3JGCd2QeI4dR1rfdpEOVeOza0X+Qj+MjpSp04wdquB/Paa4fdmDHDUdTaPNhc7XIGuFmxuvWR2jzmNfG2F1hy1iV3W4IwQOXP1rtdNe3wK1BKgfR/oUB1DTClIzklWOfXgD8xUfuWkFM9lMW8bD9OS6ZTh692vAx8AEn51mOWs2/sOW+sfbTX0vrJ54KgE/kB86QS5PvBx9NX2Sa5d7Ppaszs7usq+6UiXOaEd+7v3bBgcFEfpWg7XtVXTTIg/VncgvlW/vEbuWK2PYz/l7bv+z/0VUR/xFcRafVf6VenleMIPB3oKzI9wxtV70Fu7LI7SX5cRyY1axDWpKnSkjdsPPHnipyqfDbdDK5TKXeW0rAPyqGaX0a5alsXUX64yilncGHFewSU1W8aNBm6BvV6nL3XhEsbXFL9tJKhwHzNMGQ+BosGzZ3PhN7jom7j5nwr+kTYscAvyGmgeW9QGa6O3GE22lxyUylC/dUVgA+lUzYEov2soEbUhLrKbUlaEOqwkq2jj68zUcCi5EiQytTsNu8KQyFHI2ezw9KD1IgWG7f8AOfmg5ZHovopidEfQpbMhpxKfeKVggUYuEJ9fdsymXF/hS4Caqa52ZC9aXmwWOQiAxKtoUvarDaFhaCM45Z5fGumk0DTmsLXZrvY4aZi/5MyK6SVZBGVDr+VSjNdqALdrq/1TxkGwCFc1K4T7opXSVtc1h3i2QrtBXCuDCX2F43IV1wc1mUpCARRSEXyofG7NtJMSA8m27ik5AW4pQ+RNSSdbYc23OW+QyFR3EbFI5DFZlKjbDGwU0Umtja3gLEkW6K/bFW5xoGMpvuyjptxjFYlz09bLjZU2eSyTDSEgISojATy4ittSnFjTyE4tB5WDYrTDsttat0Bstx2s7UlROMnJ4nzNYWp9L2jUfc/WjCne5JKMLKcZ9K3dKDG0t0kbJC1pFVsvNplDbKWkDCUpCR6Co5K0FpeTOXMdtiC4tW9YCiEqPiU5xUnpSOiY/wCIWgsa7kLQ3rSFgu6mlzYKVLaTsQpCighPhkdKx5OhdNPwI8FVvCWI6yttKFlOFHmcjmeFSalIYIzdtCQxtPoo9D0Zp+JHksMwvZlAJeUtalKUAcgZJzzrm1aOsNtnpnxoZMlIwlxxxSyn0yeFSClHYjFe6NkdtvhBSlKlT1//2Q==";
+
+// ==================== GENERATE PDF ====================
+let _lastRec = null;
+
+function generatePDF(rec){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const PW=210,PH=297,ML=15,MR=15;
+  const CW=PW-ML-MR;
+  const sp=SUPPLIERS.find(s=>s.id===rec.supplier)||{name:rec.supplier};
+  const sig=rec.sig||{};
+  const now=new Date();
+  const stamp=`${now.getDate().toString().padStart(2,'0')}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getFullYear()+543} ${now.toLocaleTimeString('th-TH')}`;
+
+  // HEADER BAR
+  doc.setFillColor(15,39,68);doc.rect(0,0,PW,22,'F');
+  try{doc.addImage(LOGO_B64,'JPEG',ML,2,18,18);}catch(e){}
+  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(255,255,255);
+  doc.text('SWI Foods',ML+21,10);
+  doc.setFontSize(7.5);doc.setFont('helvetica','normal');
+  doc.text('Smart QA Factory — Quality Assurance System',ML+21,15.5);
+  doc.setFontSize(8);doc.setTextColor(200,240,220);
+  doc.text('DOC NO: SD-QA-08   REV: 01',PW-MR,9,{align:'right'});
+  doc.text(stamp,PW-MR,14,{align:'right'});
+
+  // TITLE BAND
+  doc.setFillColor(29,158,117);doc.rect(0,22,PW,9,'F');
+  doc.setFontSize(12);doc.setFont('helvetica','bold');doc.setTextColor(255,255,255);
+  doc.text('ใบบันทึกการรับวัตถุดิบหน้างาน',PW/2,28.5,{align:'center'});
+  doc.setFontSize(8);
+  doc.text('MATERIAL RECEIVING INSPECTION RECORD',PW/2,32.5,{align:'center'});
+
+  let y=38;
+
+  // INFO BOX
+  doc.setFillColor(244,245,247);doc.setDrawColor(221,225,231);
+  doc.roundedRect(ML,y,CW,30,2,2,'FD');y+=5;
+  const col1=ML+4,col2=ML+62,col3=ML+CW/2+4,col4=ML+CW/2+52;
+  const labelClr=[92,100,112],valClr=[26,33,48];
+  const field=(lbl,val,lx,rx,fy)=>{
+    doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(...labelClr);
+    doc.text(lbl+':',lx,fy);
+    doc.setFont('helvetica','normal');doc.setTextColor(...valClr);
+    doc.text(String(val||'—'),rx,fy,{maxWidth:CW/2-rx+ML+CW/2});
+  };
+  field('เลขที่เอกสาร',rec.docNo,col1,col2,y);field('วันที่รับ',rec.date,col3,col4,y);y+=6;
+  field('Supplier',sp.name,col1,col2,y);field('เวลา',rec.time,col3,col4,y);y+=6;
+  field('ทะเบียนรถ',rec.carReg||'—',col1,col2,y);
+  field('อุณหภูมิรถ',rec.carTemp!=null?rec.carTemp+' °C':'—',col3,col4,y);y+=6;
+  field('ผู้ตรวจรับ QA',rec.inspector,col1,col2,y);
+  field('หมายเหตุ',rec.note||'—',col3,col4,y);y+=8;
+
+  // SAMPLING NOTE
+  doc.setFillColor(225,245,238);doc.setDrawColor(159,225,203);
+  doc.roundedRect(ML,y,CW,7,1.5,1.5,'FD');
+  doc.setFontSize(7);doc.setFont('helvetica','bold');doc.setTextColor(13,122,95);
+  doc.text('แผนการสุ่มตัวอย่าง SD-QA-08: เนื้อสัตว์ 10% | ไม้เสียบ 5% | ของแห้ง √N+1 | บรรจุภัณฑ์ AQL',PW/2,y+4.5,{align:'center'});
+  y+=10;
+
+  // TABLE HEADER
+  const cols=[
+    {h:'#',w:8},{h:'รหัส',w:18},{h:'ชื่อวัตถุดิบ',w:42},{h:'ประเภท',w:14},
+    {h:'Lot No',w:24},{h:'จำนวน',w:18},{h:'Temp(°C)',w:18},{h:'Visual',w:13},{h:'ผล',w:13},{h:'หมายเหตุ',w:0}
+  ];
+  let sumW=cols.slice(0,-1).reduce((a,c)=>a+c.w,0);
+  cols[cols.length-1].w=CW-sumW;
+
+  doc.setFillColor(15,39,68);doc.rect(ML,y,CW,7,'F');
+  doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(255,255,255);
+  let cx=ML;
+  cols.forEach(c=>{doc.text(c.h,cx+c.w/2,y+4.5,{align:'center',maxWidth:c.w-1});cx+=c.w;});
+  y+=7;
+
+  // TABLE ROWS
+  const mats=rec.materials||rec.mats||[];
+  mats.forEach((m,i)=>{
+    const rowH=10;
+    if(y+rowH>PH-50){
+      doc.addPage();
+      doc.setFillColor(15,39,68);doc.rect(ML,15,CW,7,'F');
+      doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(255,255,255);
+      let hx=ML;cols.forEach(c=>{doc.text(c.h,hx+c.w/2,19.5,{align:'center'});hx+=c.w;});
+      y=22;
+    }
+    doc.setFillColor(i%2===0?255:248,i%2===0?255:250,i%2===0?255:252);
+    doc.rect(ML,y,CW,rowH,'F');
+    doc.setDrawColor(221,225,231);doc.rect(ML,y,CW,rowH,'S');
+
+    const temps=[m.t1,m.t2,m.t3].map(t=>parseFloat(t)).filter(t=>!isNaN(t));
+    const avgT=temps.length?(temps.reduce((a,b)=>a+b,0)/temps.length).toFixed(1):'—';
+    const mi=MATERIALS.find(x=>x.code===m.code)||{};
+    let tSt='—',tClr=valClr;
+    if(temps.length&&mi.minTemp!=null){
+      tSt=temps.every(t=>t>=mi.minTemp&&t<=mi.maxTemp)?'PASS':'FAIL';
+      tClr=tSt==='PASS'?[46,125,50]:[192,57,43];
+    }
+    const resClr=m.result==='PASS'?[46,125,50]:m.result==='REJECT'?[192,57,43]:[232,144,10];
+    doc.setFontSize(7);
+    const rowData=[
+      {v:String(i+1),clr:valClr},{v:m.code||'—',clr:valClr},{v:m.name||'—',clr:valClr},
+      {v:m.type||'—',clr:valClr},{v:String(m.lot||'—'),clr:valClr},
+      {v:m.qty?(m.qty+' '+(m.unit||'')):'—',clr:valClr},
+      {v:avgT,clr:tClr},{v:m.visual||'—',clr:valClr},
+      {v:m.result||'—',clr:resClr},{v:m.note||'—',clr:valClr}
+    ];
+    let rx=ML;
+    rowData.forEach((rd,ri)=>{
+      doc.setFont('helvetica',ri===8?'bold':'normal');
+      doc.setTextColor(...rd.clr);
+      doc.text(String(rd.v),rx+cols[ri].w/2,y+6.5,{align:'center',maxWidth:cols[ri].w-1});
+      rx+=cols[ri].w;
+    });
+    y+=rowH;
+  });
+  y+=6;
+
+  // PHOTOS PAGE
+  const matsWithPhotos=mats.filter(m=>m.photo1||m.photo2);
+  if(matsWithPhotos.length>0){
+    doc.addPage();
+    doc.setFillColor(15,39,68);doc.rect(0,0,PW,14,'F');
+    doc.setFontSize(11);doc.setFont('helvetica','bold');doc.setTextColor(255,255,255);
+    doc.text('รูปถ่ายสินค้า — Photo Evidence',PW/2,9.5,{align:'center'});
+    let py=20;
+    matsWithPhotos.forEach((m,mi)=>{
+      const mi2=MATERIALS.find(x=>x.code===m.code)||{};
+      if(py>PH-80){doc.addPage();py=20;}
+      doc.setFontSize(8.5);doc.setFont('helvetica','bold');doc.setTextColor(15,39,68);
+      doc.text((mats.indexOf(m)+1)+'. '+m.code+' — '+(mi2.name||m.name||'—')+' | Lot: '+(m.lot||'—'),ML,py);
+      py+=5;
+      const imgW=CW/2-5;const imgH=55;
+      [1,2].forEach((s,si)=>{
+        const ph=m['photo'+s];
+        if(ph){
+          const ix=ML+(si*(imgW+10));
+          doc.setFillColor(244,245,247);doc.setDrawColor(221,225,231);
+          doc.roundedRect(ix,py,imgW,imgH+8,2,2,'FD');
+          try{
+            const fmt=ph.startsWith('data:image/png')?'PNG':'JPEG';
+            doc.addImage(ph,fmt,ix+2,py+2,imgW-4,imgH);
+          }catch(e){}
+          doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(92,100,112);
+          doc.text('รูปที่ '+s,ix+imgW/2,py+imgH+5.5,{align:'center'});
+        }
+      });
+      py+=imgH+16;
+    });
+  }
+
+  // OVERALL RESULT
+  const allPass=mats.every(m=>m.result==='PASS');
+  const hasRej=mats.some(m=>m.result==='REJECT');
+  const overall=allPass?'PASS — ผ่านการตรวจรับ':hasRej?'REJECT — ไม่ผ่าน':'HOLD — รอการตรวจสอบ';
+  const oClr=allPass?[46,125,50]:hasRej?[192,57,43]:[232,144,10];
+  const oBg=allPass?[232,245,233]:hasRej?[255,235,238]:[255,243,224];
+  doc.setFillColor(...oBg);doc.setDrawColor(...oClr);
+  doc.roundedRect(ML,y,CW,10,2,2,'FD');
+  doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(...oClr);
+  doc.text('ผลการตรวจรับโดยรวม: '+overall,PW/2,y+6.5,{align:'center'});
+  y+=15;
+
+  // SIGNATURE SECTION
+  if(y+45>PH-15){doc.addPage();y=20;}
+  const sigBoxW=CW/2-4;
+  doc.setFillColor(244,245,247);doc.setDrawColor(221,225,231);
+  doc.roundedRect(ML,y,sigBoxW,42,2,2,'FD');
+  doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(...labelClr);
+  doc.text('ลายเซ็นผู้ตรวจรับ QA',ML+sigBoxW/2,y+6,{align:'center'});
+  if(sig.sigBase64){
+    try{doc.addImage(sig.sigBase64,'PNG',ML+4,y+9,sigBoxW-8,22);}catch(e){}
+  }
+  doc.setDrawColor(200,200,200);doc.line(ML+4,y+33,ML+sigBoxW-4,y+33);
+  doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(...valClr);
+  doc.text(sig.signerName||rec.inspector||'—',ML+sigBoxW/2,y+37,{align:'center'});
+  doc.text('ผู้ตรวจรับ / QA Inspector',ML+sigBoxW/2,y+41,{align:'center'});
+
+  const bx2=ML+sigBoxW+8;
+  doc.setFillColor(244,245,247);doc.setDrawColor(221,225,231);
+  doc.roundedRect(bx2,y,sigBoxW,42,2,2,'FD');
+  doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(...labelClr);
+  doc.text('อนุมัติ / QA Supervisor',bx2+sigBoxW/2,y+6,{align:'center'});
+  doc.setDrawColor(200,200,200);doc.line(bx2+4,y+33,bx2+sigBoxW-4,y+33);
+  doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(...valClr);
+  doc.text('วันที่: ___/___/______',bx2+sigBoxW/2,y+37,{align:'center'});
+  doc.text('QA Supervisor',bx2+sigBoxW/2,y+41,{align:'center'});
+
+  // SIGNED ELECTRONICALLY STAMP
+  if(sig.signerName){
+    doc.setFontSize(6.5);doc.setTextColor(13,122,95);
+    doc.text('✓ Electronically Signed | '+sig.signedAt,ML,y+47);
+  }
+
+  // FOOTER
+  const totalPages=doc.getNumberOfPages();
+  for(let p=1;p<=totalPages;p++){
+    doc.setPage(p);
+    doc.setFillColor(15,39,68);doc.rect(0,PH-10,PW,10,'F');
+    doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(180,200,220);
+    doc.text('SWI Foods — Smart QA Factory | QA Receiving Record | SD-QA-08 Rev.01',ML,PH-4);
+    doc.text('หน้า '+p+'/'+totalPages,PW-MR,PH-4,{align:'right'});
+    doc.text(stamp,PW/2,PH-4,{align:'center'});
+  }
+
+  const fname='QA_Receiving_'+rec.docNo.slice(0,8)+'_'+rec.date.replace(/-/g,'')+'.pdf';
+  doc.save(fname);
+  showToast('ดาวน์โหลด PDF เรียบร้อย ✓','success');
+}
+
+function downloadPDFAndClose(){ if(_lastRec) generatePDF(_lastRec); closeModal(); }
+
+
+
+// ==================== PHOTO HANDLING ====================
+function setMatPhoto(idx, slot, input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const m = currentMaterials.find(m=>m.idx===idx);
+    if(m) m['photo'+slot] = e.target.result;
+    const prev = document.getElementById('photo-prev-'+idx+'-'+slot);
+    const slotEl = document.getElementById('photo-slot-'+idx+'-'+slot);
+    const clearBtn = document.getElementById('photo-clear-'+idx+'-'+slot);
+    const lbl = document.getElementById('photo-lbl-'+idx+'-'+slot);
+    if(prev){ prev.src=e.target.result; prev.style.display='block'; }
+    if(slotEl) slotEl.classList.add('has-photo');
+    if(clearBtn) clearBtn.style.display='flex';
+    if(lbl) lbl.style.display='none';
+  };
+  reader.readAsDataURL(file);
+}
+function clearMatPhoto(idx, slot){
+  const m = currentMaterials.find(m=>m.idx===idx);
+  if(m) m['photo'+slot] = null;
+  const prev = document.getElementById('photo-prev-'+idx+'-'+slot);
+  const slotEl = document.getElementById('photo-slot-'+idx+'-'+slot);
+  const clearBtn = document.getElementById('photo-clear-'+idx+'-'+slot);
+  const lbl = document.getElementById('photo-lbl-'+idx+'-'+slot);
+  const inp = document.getElementById('photo-inp-'+idx+'-'+slot);
+  if(prev){ prev.src=''; prev.style.display='none'; }
+  if(slotEl) slotEl.classList.remove('has-photo');
+  if(clearBtn) clearBtn.style.display='none';
+  if(lbl) lbl.style.display='flex';
+  if(inp) inp.value='';
+}
+
+
+function exportExcelCloud(){
+  const res = await cloudExportData();
+  if(!res||!res.headers){ exportExcel(); return; } // fallback local
+  // Rebuild records from cloud and export
+  const cloudRecs = res.headers.map(h=>({
+    docNo:h.doc_no, date:h.date, time:h.time, supplier:h.supplier_id||'',
+    carReg:h.car_registration||'', carTemp:h.car_temp, inspector:h.qa_inspector,
+    note:h.note||'',
+    materials: res.details.filter(d=>d.doc_no===h.doc_no).map(d=>({
+      code:d.material_code,name:d.material_name,type:d.material_type,
+      lot:d.lot_no,qty:d.qty,unit:d.unit,mfg:d.mfg_date,exp:d.exp_date,
+      t1:d.temp1,t2:d.temp2,t3:d.temp3,visual:d.visual_check,
+      leak:d.leak_check,doc:d.document_check,result:d.result,note:d.note
+    })),
+    sig:{signerName:h.sig_name||'',signedAt:h.sig_at||''}
+  }));
+  const _orig = records;
+  records = cloudRecs;
+  const cloudNC = (res.nc_logs||[]).map(n=>({id:n.nc_id,docNo:n.doc_no,supplier:n.supplier_id||'',failType:n.fail_type,corrective:n.corrective_action,qa:n.qa_supervisor,status:n.status,closedDate:n.closed_date||'',note:n.note||''}));
+  const _origNC = ncLogs;
+  ncLogs = cloudNC;
+  exportExcel();
+  records = _orig;
+  ncLogs = _origNC;
+}
+
+// ==================== BOOT ====================
+document.getElementById('save-modal').addEventListener('click',function(e){
+  if(e.target===this) closeModal();
+});
+document.getElementById('nc-modal').addEventListener('click',function(e){
+  if(e.target===this) closeNCModal();
+});
+init();
+</script>
+</body>
+</html>
