@@ -1,4 +1,4 @@
-name = "qa-receiving-api"
+name = "qa-receiving"
 main = "src/index.js"
 compatibility_date = "2024-11-01"
 
