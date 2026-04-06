@@ -12,283 +12,166 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
-// Cloud Direct Module
-
 // ═══════════════════════════════════════════════════════════════
-//  SWI Foods Cloud Direct — Cloudflare D1 REST API
-//  FM-QA-31 | SD-QA-08 | ไม่ต้อง deploy Worker
+//  SWI Foods Secure Cloud API Integration
+//  เชื่อมต่ออย่างปลอดภัยผ่าน Cloudflare Worker
 // ═══════════════════════════════════════════════════════════════
-const CF_ACCT   = 'acd0ef2518aed1f77c126d0592469ae1';
-const CF_DB     = '391d171b-81b2-4156-bff0-ad9f0ae7e6af';
-const D1_URL    = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCT}/d1/database/${CF_DB}/query`;
-const TOK_KEY   = 'swi_cf_token';
-const QUEUE_KEY = 'swi_sync_queue';
 const API_BASE  = 'https://qa-receiving-api.swi-foods.workers.dev';
-  
-function getCFToken(){ return localStorage.getItem(TOK_KEY)||''; }
-function setCFToken(t){ localStorage.setItem(TOK_KEY,t); }
-function cloudReady(){ return !!getCFToken()&&navigator.onLine; }
+const QUEUE_KEY = 'swi_sync_queue';
 
-async function d1(sql,params=[]){
-  const token=getCFToken();
-  if(!token) throw new Error('No API Token — กดปุ่ม ☁ เพื่อตั้งค่า');
-  const res=await fetch(D1_URL,{
-    method:'POST',
-    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-    body:JSON.stringify({sql,params})
-  });
-  const data=await res.json();
-  if(!data.success) throw new Error(data.errors?.map(e=>e.message).join(', ')||'D1 error '+res.status);
-  return data.result?.[0]||{results:[]};
-}
+function cloudReady() { return navigator.onLine; }
 
+// ระบบเก็บคิวเวลาเน็ตหลุด (Offline-First)
 function queueRec(rec){
-  try{
-    const q=JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]');
-    q.push({rec,ts:Date.now()});
-    localStorage.setItem(QUEUE_KEY,JSON.stringify(q));
-  }catch(e){}
+  try {
+    const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+    q.push({ rec, ts: Date.now() });
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
+  } catch(e) {}
 }
+
 async function flushQueue(){
   if(!cloudReady()) return;
-  try{
-    const q=JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]');
+  try {
+    const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
     if(!q.length) return;
-    const rem=[];
+    const rem = [];
     for(const item of q){
-      const ok=await cloudSaveRecord(item.rec).catch(()=>false);
+      const ok = await cloudSaveRecord(item.rec).catch(() => false);
       if(!ok) rem.push(item);
     }
-    localStorage.setItem(QUEUE_KEY,JSON.stringify(rem));
-    if(rem.length<q.length) showCloudStatus(`☁ Queue Sync: ${q.length-rem.length} รายการ`,'ok');
-  }catch(e){}
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(rem));
+    if(rem.length < q.length) showToast(`☁ ทยอย Sync คิว ${q.length - rem.length} รายการสำเร็จ`, 'ok');
+  } catch(e) {}
 }
 
-async function cloudSaveRecord(rec){
-  if(!cloudReady()){queueRec(rec);return false;}
-  try{
-    const sp=(typeof SUPPLIERS!=='undefined')?SUPPLIERS.find(s=>s.id===rec.supplier)||{}:{};
-    const mats=rec.materials||rec.mats||[];
-    const allPass=mats.every(m=>m.result==='PASS');
-    const hasRej=mats.some(m=>m.result==='REJECT');
-    const overall=allPass?'PASS':hasRej?'REJECT':'HOLD';
-    await d1(`INSERT INTO receiving_header(doc_no,date,time,supplier_id,supplier_name,car_registration,car_temp,qa_inspector,note,signer_name,signed_at,overall_result,created_at)VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(doc_no) DO UPDATE SET date=excluded.date,time=excluded.time,supplier_id=excluded.supplier_id,supplier_name=excluded.supplier_name,car_registration=excluded.car_registration,car_temp=excluded.car_temp,qa_inspector=excluded.qa_inspector,note=excluded.note,signer_name=excluded.signer_name,signed_at=excluded.signed_at,overall_result=excluded.overall_result`,
-      [rec.docNo,rec.date,rec.time||'',rec.supplier||'',sp.name||'',rec.carReg||'',rec.carTemp??null,rec.inspector||'',rec.note||'',rec.sig?.signerName||'',rec.sig?.signedAt||'',overall,new Date().toISOString()]);
+window.addEventListener('online', flushQueue);
 
-    for(let i=0;i<mats.length;i++){
-      const m=mats[i];
-      const id=rec.docNo+'_'+String(i+1).padStart(2,'0');
-      const mi=(typeof MATERIALS!=='undefined')?MATERIALS.find(x=>x.code===m.code)||{}:{};
-      const ts=[m.t1,m.t2,m.t3].map(Number).filter(t=>!isNaN(t));
-      const avg=ts.length?parseFloat((ts.reduce((a,b)=>a+b,0)/ts.length).toFixed(1)):null;
-      const mn=mi.minTemp??mi.minT; const mx=mi.maxTemp??mi.maxT;
-      const tst=ts.length&&mn!=null?(ts.every(t=>t>=mn&&t<=mx)?'PASS':'FAIL'):'';
-      await d1(`INSERT INTO receiving_detail(detail_id,doc_no,date,supplier_name,material_code,material_name,material_type,lot_no,qty,unit,mfg_date,exp_date,temp1,temp2,temp3,avg_temp,temp_status,visual_check,leak_check,document_check,result,note,photo1,photo2,created_at)VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(detail_id) DO UPDATE SET lot_no=excluded.lot_no,qty=excluded.qty,unit=excluded.unit,mfg_date=excluded.mfg_date,exp_date=excluded.exp_date,temp1=excluded.temp1,temp2=excluded.temp2,temp3=excluded.temp3,avg_temp=excluded.avg_temp,temp_status=excluded.temp_status,visual_check=excluded.visual_check,leak_check=excluded.leak_check,document_check=excluded.document_check,result=excluded.result,note=excluded.note,photo1=excluded.photo1,photo2=excluded.photo2`,
-        [id,rec.docNo,rec.date,sp.name||'',m.code||'',m.name||'',m.type||mi.type||'',m.lot||'',parseFloat(m.qty)||null,m.unit||'',m.mfg||'',m.exp||'',m.t1??null,m.t2??null,m.t3??null,avg,tst,m.visual||'',m.leak||'',m.doc||'',m.result||'',m.note||'',m.photo1?m.photo1.slice(0,409600):null,m.photo2?m.photo2.slice(0,409600):null,new Date().toISOString()]);
-    }
-    if(rec.sig?.sigBase64){
-      await d1(`INSERT INTO signatures(doc_no,signer_name,signed_at,sig_base64,created_at)VALUES(?,?,?,?,?) ON CONFLICT(doc_no) DO UPDATE SET signer_name=excluded.signer_name,signed_at=excluded.signed_at,sig_base64=excluded.sig_base64`,
-        [rec.docNo,rec.sig.signerName||'',rec.sig.signedAt||'',rec.sig.sigBase64.slice(0,204800),new Date().toISOString()]);
-    }
-    showCloudStatus('☁ บันทึกลง Cloud D1 แล้ว','ok');
+// ฟังก์ชันบันทึกข้อมูลวิ่งเข้า API
+async function cloudSaveRecord(rec){
+  if(!cloudReady()){ queueRec(rec); return false; }
+  try {
+    const sp = (typeof SUPPLIERS !== 'undefined') ? SUPPLIERS.find(s => s.id === rec.supplier) || {} : {};
+    const allPass = rec.mats.every(m => m.result === 'PASS');
+    const hasRej = rec.mats.some(m => m.result === 'REJECT');
+    const overall = allPass ? 'PASS' : hasRej ? 'REJECT' : 'HOLD';
+
+    const payload = {
+      header: {
+        doc_no: rec.docNo, date: rec.date, time: rec.time || '',
+        supplier_id: rec.supplier || '', supplier_name: sp.name || '',
+        car_registration: rec.carReg || '', car_temp: rec.carTemp ?? null,
+        qa_inspector: rec.inspector || '', note: rec.note || '',
+        overall_result: overall
+      },
+      details: rec.mats.map((m, i) => ({
+        detail_id: rec.docNo + '_' + String(i+1).padStart(2, '0'),
+        material_code: m.code || '', material_name: m.name || '', material_type: m.type || '',
+        lot_no: m.lot || '', qty: parseFloat(m.qty) || null, unit: m.unit || '',
+        mfg_date: m.mfg || '', exp_date: m.exp || '',
+        temp1: m.t1 ?? null, temp2: m.t2 ?? null, temp3: m.t3 ?? null,
+        temp_status: '', visual_check: m.visual || '', leak_check: m.leak || '',
+        document_check: m.doc || '', result: m.result || '', note: m.note || '',
+        photo1: m.photo1 ? m.photo1.slice(0, 409600) : null,
+        photo2: m.photo2 ? m.photo2.slice(0, 409600) : null
+      })),
+      signatures: rec.sig?.sigBase64 ? {
+        signer_name: rec.sig.signerName || '',
+        signed_at: rec.sig.signedAt || '',
+        sig_base64: rec.sig.sigBase64.slice(0, 204800)
+      } : null
+    };
+
+    const res = await fetch(API_BASE + '/api/receiving', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if(!res.ok) throw new Error('API Error');
     flushQueue();
     return true;
-  }catch(e){console.warn('[D1]',e.message);queueRec(rec);showCloudStatus('⚠ '+e.message.slice(0,60),'warn');return false;}
+  } catch(e) {
+    queueRec(rec);
+    return false;
+  }
 }
 
 async function cloudSaveNC(nc){
   if(!cloudReady()) return false;
-  try{
-    const sp=(typeof SUPPLIERS!=='undefined')?SUPPLIERS.find(s=>s.id===(nc.supplier||nc.supplier_id))||{}:{};
-    await d1(`INSERT OR REPLACE INTO nc_log(nc_id,doc_no,supplier_id,supplier_name,fail_type,corrective_action,qa_supervisor,status,closed_date,note,created_at)VALUES(?,?,?,?,?,?,?,?,?,?,?)`,
-      [nc.id||nc.nc_id,nc.docNo||nc.doc_no||'',nc.supplier||'',sp.name||nc.supplierName||'',nc.failType||nc.fail_type||'',nc.corrective||nc.corrective_action||'—',nc.qa||nc.qa_supervisor||'',nc.status||'Open',nc.closedDate||nc.closed_date||null,nc.note||'',new Date().toISOString()]);
-    return true;
-  }catch(e){console.warn('[D1 NC]',e.message);return false;}
-}
-async function cloudCloseNC(id,body){
-  if(!cloudReady()) return false;
-  try{await d1(`UPDATE nc_log SET status=?,closed_date=?,corrective_action=COALESCE(?,corrective_action) WHERE nc_id=?`,[body.status||'Closed',body.closed_date||new Date().toISOString().split('T')[0],body.corrective_action||null,id]);return true;}catch(e){return false;}
-}
-async function cloudFetchAll(opts={}){
-  if(!cloudReady()) return null;
-  try{
-    let w='WHERE 1=1';
-    if(opts.from) w+=` AND date>='${opts.from}'`;
-    if(opts.to)   w+=` AND date<='${opts.to}'`;
-    const h=await d1(`SELECT h.*,s.signer_name sig_name,s.signed_at sig_at FROM receiving_header h LEFT JOIN signatures s ON h.doc_no=s.doc_no ${w} ORDER BY h.date DESC,h.time DESC LIMIT 300`);
-    const data=await Promise.all((h.results||[]).map(async hdr=>{
-      const d2=await d1(`SELECT * FROM receiving_detail WHERE doc_no=? ORDER BY detail_id`,[hdr.doc_no]);
-      return {...hdr,details:d2.results||[]};
-    }));
-    return {success:true,count:data.length,data};
-  }catch(e){console.warn('[D1 fetch]',e.message);return null;}
-}
-async function cloudFetchNC(){
-  if(!cloudReady()) return null;
-  try{const r=await d1(`SELECT * FROM nc_log ORDER BY created_at DESC LIMIT 300`);return {success:true,data:r.results||[]};}catch(e){return null;}
-}
-async function cloudExportData(opts={}){
-  if(!cloudReady()) return null;
-  try{
-    let w='WHERE 1=1';
-    if(opts.from) w+=` AND h.date>='${opts.from}'`;
-    if(opts.to)   w+=` AND h.date<='${opts.to}'`;
-    const [H,D,N]=await Promise.all([
-      d1(`SELECT h.*,s.signer_name sig_name,s.signed_at sig_at FROM receiving_header h LEFT JOIN signatures s ON h.doc_no=s.doc_no ${w} ORDER BY h.date DESC LIMIT 1000`),
-      d1(`SELECT d.detail_id,d.doc_no,d.date,d.supplier_name,d.material_code,d.material_name,d.material_type,d.lot_no,d.qty,d.unit,d.mfg_date,d.exp_date,d.temp1,d.temp2,d.temp3,d.avg_temp,d.temp_status,d.visual_check,d.leak_check,d.document_check,d.result,d.note FROM receiving_detail d JOIN receiving_header h ON d.doc_no=h.doc_no ${w} ORDER BY d.doc_no,d.detail_id`),
-      d1(`SELECT * FROM nc_log ORDER BY created_at DESC`),
-    ]);
-    return {success:true,headers:H.results||[],details:D.results||[],nc_logs:N.results||[]};
-  }catch(e){console.warn('[D1 export]',e.message);return null;}
-}
-
-// ── CLOUD SYNC helpers for both apps ─────────────────────────────────────
-async function syncFromCloud(){
-  if(!cloudReady()){showCloudStatus('กรุณาตั้งค่า API Token ก่อน','warn');openCloudSettings();return;}
-  showCloudStatus('กำลัง Sync จาก Cloud...','');
-  const res=await cloudFetchAll();
-  if(!res||!res.data){showCloudStatus('Sync ล้มเหลว','warn');return;}
-  res.data.forEach(cr=>{
-    const sp=(typeof SUPPLIERS!=='undefined')?SUPPLIERS.find(s=>s.id===cr.supplier_id)||{name:cr.supplier_name}:{name:cr.supplier_name};
-    const det=cr.details||[];
-    const mats=det.map(d=>({code:d.material_code,name:d.material_name,type:d.material_type,lot:d.lot_no,qty:d.qty,unit:d.unit,mfg:d.mfg_date,exp:d.exp_date,t1:d.temp1,t2:d.temp2,t3:d.temp3,visual:d.visual_check,leak:d.leak_check,doc:d.document_check,result:d.result,note:d.note,photo1:d.photo1,photo2:d.photo2}));
-    const rec={docNo:cr.doc_no,date:cr.date,time:cr.time||'',supplier:cr.supplier_id||'',carReg:cr.car_registration||'',carTemp:cr.car_temp,inspector:cr.qa_inspector||'',note:cr.note||'',sig:{signerName:cr.sig_name||'',signedAt:cr.sig_at||''}};
-    // both apps use different field names
-    rec.materials=mats; rec.mats=mats;
-    const arr=(typeof records!=='undefined')?records:(typeof records!=='undefined'?records:[]);
-    const ex=arr.findIndex(r=>r.docNo===cr.doc_no);
-    if(ex>=0) arr[ex]=rec; else arr.unshift(rec);
-  });
-  const ncRes=await cloudFetchNC();
-  if(ncRes&&ncRes.data){
-    const arr2=(typeof ncLogs!=='undefined')?ncLogs:[];
-    ncRes.data.forEach(nc=>{
-      const obj={id:nc.nc_id,docNo:nc.doc_no,supplier:nc.supplier_id||'',failType:nc.fail_type,corrective:nc.corrective_action,qa:nc.qa_supervisor,status:nc.status,closedDate:nc.closed_date||'',note:nc.note||''};
-      const ex=arr2.findIndex(n=>n.id===nc.nc_id);
-      if(ex>=0) arr2[ex]=obj; else arr2.unshift(obj);
+  try {
+    const sp = (typeof SUPPLIERS !== 'undefined') ? SUPPLIERS.find(s => s.id === (nc.supplier || nc.supplier_id)) || {} : {};
+    const payload = {
+      nc_id: nc.id || nc.nc_id, doc_no: nc.docNo || nc.doc_no || '',
+      supplier_id: nc.supplier || '', supplier_name: sp.name || nc.supplierName || '',
+      fail_type: nc.failType || nc.fail_type || '', corrective_action: nc.corrective || nc.corrective_action || '—',
+      qa_supervisor: nc.qa || nc.qa_supervisor || '', status: nc.status || 'Open',
+      closed_date: nc.closedDate || nc.closed_date || null, note: nc.note || ''
+    };
+    await fetch(API_BASE + '/api/nc', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
-  }
-  if(typeof renderHistory==='function') renderHistory();
-  if(typeof renderHist==='function') renderHist();
-  if(typeof renderNC==='function') renderNC();
-  if(typeof renderHome==='function') renderHome();
-  showCloudStatus(`☁ Sync ${res.count} รายการจาก Cloud เรียบร้อย`,'ok');
+    return true;
+  } catch(e) { return false; }
 }
 
-async function syncFromCloudMob(){ return syncFromCloud(); }
-
-async function exportExcelCloud(){
-  const res=await cloudExportData();
-  if(!res||!res.headers){if(typeof exportExcel==='function')exportExcel();return;}
-  const _orig=(typeof records!=='undefined')?[...records]:[];
-  const _origNC=(typeof ncLogs!=='undefined')?[...ncLogs]:[];
-  if(typeof records!=='undefined') records=res.headers.map(h=>({
-    docNo:h.doc_no,date:h.date,time:h.time||'',supplier:h.supplier_id||'',
-    carReg:h.car_registration||'',carTemp:h.car_temp,inspector:h.qa_inspector||'',note:h.note||'',
-    materials:res.details.filter(d=>d.doc_no===h.doc_no).map(d=>({code:d.material_code,name:d.material_name,type:d.material_type,lot:d.lot_no,qty:d.qty,unit:d.unit,mfg:d.mfg_date,exp:d.exp_date,t1:d.temp1,t2:d.temp2,t3:d.temp3,visual:d.visual_check,leak:d.leak_check,doc:d.document_check,result:d.result,note:d.note})),
-    sig:{signerName:h.sig_name||'',signedAt:h.sig_at||''}
-  }));
-  if(typeof ncLogs!=='undefined') ncLogs=res.nc_logs.map(n=>({id:n.nc_id,docNo:n.doc_no,supplier:n.supplier_id||'',failType:n.fail_type,corrective:n.corrective_action,qa:n.qa_supervisor,status:n.status,closedDate:n.closed_date||'',note:n.note||''}));
-  if(typeof exportExcel==='function') exportExcel();
-  if(typeof records!=='undefined') records=_orig;
-  if(typeof ncLogs!=='undefined') ncLogs=_origNC;
+async function cloudCloseNC(id, body){
+  if(!cloudReady()) return false;
+  try {
+    await fetch(API_BASE + '/api/nc/' + id, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: body.status || 'Closed',
+        closed_date: body.closed_date || new Date().toISOString().split('T')[0],
+        corrective_action: body.corrective_action || null
+      })
+    });
+    return true;
+  } catch(e) { return false; }
 }
 
-// ── STATUS BAR ────────────────────────────────────────────────────────────
-function showCloudStatus(msg,type=''){
-  let el=document.getElementById('_cst');
-  if(!el){el=document.createElement('div');el.id='_cst';
-    el.style.cssText='position:fixed;bottom:75px;left:50%;transform:translateX(-50%);padding:7px 18px;border-radius:20px;font-size:12px;font-weight:600;z-index:9000;opacity:0;transition:.25s;pointer-events:none;white-space:nowrap;color:#fff;';
-    document.body.appendChild(el);}
-  el.textContent=msg;
-  el.style.background=type==='ok'?'#0d7a5f':type==='warn'?'#e8900a':'#0f2744';
-  el.style.opacity='1';clearTimeout(el._t);el._t=setTimeout(()=>{el.style.opacity='0';},3200);
-}
-
-// ── SETTINGS MODAL ────────────────────────────────────────────────────────
-function openCloudSettings(){
-  document.getElementById('_csm')?.remove();
-  const m=document.createElement('div');m.id='_csm';
-  m.style.cssText='position:fixed;inset:0;background:rgba(15,39,68,.65);z-index:9000;display:flex;align-items:center;justify-content:center;';
-  m.innerHTML=`<div style="background:#fff;border-radius:16px;padding:28px 24px;max-width:500px;width:92%;font-family:Sarabun,sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div>
-        <div style="font-size:20px;font-weight:700;color:#0f2744">☁ ตั้งค่า Cloudflare Cloud</div>
-        <div style="font-size:12px;color:#9aa0ab;margin-top:2px">เชื่อมต่อ D1 Database: qa-factory-db</div>
-      </div>
-      <button onclick="document.getElementById('_csm').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#9aa0ab">✕</button>
-    </div>
-    <div style="background:#e1f5ee;border-radius:10px;padding:14px;font-size:13px;margin-bottom:16px;line-height:1.8;border:1px solid #9fe1cb">
-      <strong style="color:#0d7a5f">วิธีสร้าง API Token (ทำครั้งเดียว):</strong><br>
-      1. เปิด <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" style="color:#0d7a5f;font-weight:600">Cloudflare Dashboard → API Tokens</a><br>
-      2. กด <strong>Create Token</strong> → เลือก Template <strong>"Edit Cloudflare Workers"</strong><br>
-      3. กด <strong>Continue to Summary</strong> → <strong>Create Token</strong><br>
-      4. Copy token มาใส่ด้านล่าง และกด <strong>ทดสอบ & บันทึก</strong>
-    </div>
-    <label style="font-size:13px;font-weight:700;color:#5c6470;display:block;margin-bottom:6px">Cloudflare API Token <span style="color:#c0392b">*</span></label>
-    <div style="position:relative">
-      <input id="_cti" type="password" placeholder="เช่น xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-        style="width:100%;border:1.5px solid #dde1e7;border-radius:10px;padding:11px 40px 11px 12px;font-size:14px;font-family:Sarabun,sans-serif;box-sizing:border-box"
-        value="${getCFToken()}">
-      <button onclick="const i=document.getElementById('_cti');i.type=i.type==='password'?'text':'password'"
-        style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;font-size:14px;color:#9aa0ab">👁</button>
-    </div>
-    <div id="_cts" style="font-size:12px;min-height:20px;margin:8px 0 16px;padding:0 4px"></div>
-    <div style="display:grid;grid-template-columns:1fr auto;gap:10px">
-      <button onclick="testAndSaveToken()"
-        style="padding:13px;background:#0d7a5f;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:Sarabun,sans-serif">
-        ✓ ทดสอบ & บันทึก
-      </button>
-      <button onclick="setCFToken('');updateCloudBadge(false);document.getElementById('_cts').textContent='ลบ Token แล้ว';document.getElementById('_cti').value=''"
-        style="padding:13px 16px;background:#fff0f0;color:#c0392b;border:1px solid #ffcdd2;border-radius:10px;font-size:13px;cursor:pointer;font-family:Sarabun,sans-serif">
-        🗑 ลบ
-      </button>
-    </div>
-  </div>`;
-  document.body.appendChild(m);
-  m.addEventListener('click',e=>{if(e.target===m)m.remove();});
-}
-
-async function testAndSaveToken(){
-  const token=document.getElementById('_cti').value.trim();
-  const st=document.getElementById('_cts');
-  if(!token){st.style.color='#c0392b';st.textContent='กรุณาใส่ Token';return;}
-  st.style.color='#9aa0ab';st.textContent='⏳ กำลังทดสอบ...';
-  setCFToken(token);
-  try{
-    const r=await d1('SELECT COUNT(*) n FROM receiving_header');
-    const cnt=r.results?.[0]?.n??0;
-    st.style.color='#0d7a5f';
-    st.textContent=`✓ เชื่อมต่อสำเร็จ! มีข้อมูล ${cnt} รายการใน Cloud`;
-    updateCloudBadge(true);
-    setTimeout(()=>{document.getElementById('_csm')?.remove();flushQueue();},1800);
-  }catch(e){
-    st.style.color='#c0392b';
-    st.textContent='✗ ล้มเหลว: '+e.message.slice(0,80);
-    setCFToken('');updateCloudBadge(false);
+async function syncFromCloud(){
+  if(!cloudReady()) { showToast('ไม่มีการเชื่อมต่ออินเทอร์เน็ต', 'err'); return; }
+  showToast('กำลัง Sync จาก Cloud...', '');
+  try {
+    const res = await fetch(API_BASE + '/api/receiving').then(r => r.json());
+    if(res.data) {
+      records = res.data.map(cr => ({
+        docNo: cr.doc_no, date: cr.date, time: cr.time || '',
+        supplier: cr.supplier_id || '', carReg: cr.car_registration || '', carTemp: cr.car_temp,
+        inspector: cr.qa_inspector || '', note: cr.note || '',
+        mats: (cr.details || []).map(d => ({
+          code: d.material_code, name: d.material_name, type: d.material_type,
+          lot: d.lot_no, qty: d.qty, unit: d.unit, mfg: d.mfg_date, exp: d.exp_date,
+          t1: d.temp1, t2: d.temp2, t3: d.temp3, visual: d.visual_check, leak: d.leak_check,
+          doc: d.document_check, result: d.result, note: d.note
+        })),
+        sig: { signerName: cr.sig_name || '', signedAt: cr.sig_at || '' }
+      }));
+    }
+    const ncRes = await fetch(API_BASE + '/api/nc').then(r => r.json());
+    if(ncRes.data) {
+      ncLogs = ncRes.data.map(nc => ({
+        id: nc.nc_id, docNo: nc.doc_no, supplier: nc.supplier_id || '',
+        failType: nc.fail_type, corrective: nc.corrective_action, qa: nc.qa_supervisor,
+        status: nc.status, closedDate: nc.closed_date || '', note: nc.note || ''
+      }));
+    }
+    if(typeof renderHist === 'function') renderHist();
+    if(typeof renderNC === 'function') renderNC();
+    if(typeof renderHome === 'function') renderHome();
+    showToast('☁ Sync ข้อมูลล่าสุดสำเร็จ', 'ok');
+  } catch(e) {
+    showToast('Sync ล้มเหลว', 'err');
   }
 }
 
-function updateCloudBadge(connected){
-  let b=document.getElementById('_cbadge');
-  if(!b){b=document.createElement('button');b.id='_cbadge';
-    b.onclick=openCloudSettings;
-    b.style.cssText='position:fixed;top:10px;right:14px;z-index:160;border:none;border-radius:12px;font-size:11px;font-weight:700;padding:5px 11px;cursor:pointer;transition:.2s;';
-    document.body.appendChild(b);}
-  b.style.background=connected?'rgba(29,158,117,.2)':'rgba(200,200,200,.25)';
-  b.style.color=connected?'#0d7a5f':'#9aa0ab';
-  b.textContent=connected?'☁ Cloud ✓':'☁ ตั้งค่า Cloud';
+function exportExcelCloud(){
+  exportExcel();
 }
 
-(async()=>{
-  updateCloudBadge(!!getCFToken());
-  if(cloudReady()){
-    try{await d1('SELECT 1');updateCloudBadge(true);flushQueue();}
-    catch(e){updateCloudBadge(false);}
-  }
-  window.addEventListener('online',flushQueue);
-})();
-
+// ═══════════════════════════════════════════════════════════════
 </script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -486,7 +369,6 @@ textarea{resize:none;min-height:80px}
 </head>
 <body>
 
-<!-- HOME -->
 <div class="screen active" id="sc-home">
   <div class="app-header">
     <div class="app-header-title">&#x1F3ED; Smart QA Factory</div>
@@ -524,7 +406,6 @@ textarea{resize:none;min-height:80px}
   </nav>
 </div>
 
-<!-- FORM -->
 <div class="screen" id="sc-form">
   <div class="app-header">
     <button class="app-header-back" onclick="goHome()">&#x2190;</button>
@@ -538,7 +419,6 @@ textarea{resize:none;min-height:80px}
     <div class="fsline" id="fline2"></div>
     <div class="fstep" id="fstep3"><div class="fsdot">3</div><span class="fslabel">ตรวจสอบ</span></div>
   </div>
-  <!-- FP1: Header -->
   <div class="fpage active" id="fp1">
     <div class="fsec">
       <div class="fsec-title">&#x1F4C5; วันที่ & เวลา</div>
@@ -566,7 +446,6 @@ textarea{resize:none;min-height:80px}
       <button class="btn-m btn-teal" onclick="goFP(2)">ถัดไป — วัตถุดิบ &#x2192;</button>
     </div>
   </div>
-  <!-- FP2: Materials -->
   <div class="fpage" id="fp2">
     <div id="mat-list"></div>
     <button class="add-mat" onclick="addMat()">&#x2B; เพิ่มรายการวัตถุดิบ</button>
@@ -576,7 +455,6 @@ textarea{resize:none;min-height:80px}
       <button class="btn-m btn-teal" onclick="goFP(3)">ถัดไป — ตรวจสอบ &#x2192;</button>
     </div>
   </div>
-  <!-- FP3: Summary + Signature -->
   <div class="fpage" id="fp3">
     <div class="fsec">
       <div class="fsec-title">&#x1F4CB; สรุปการรับ</div>
@@ -606,7 +484,6 @@ textarea{resize:none;min-height:80px}
   </div>
 </div>
 
-<!-- HISTORY -->
 <div class="screen" id="sc-hist">
   <div class="app-header">
     <button class="app-header-back" onclick="goHome()">&#x2190;</button>
@@ -625,7 +502,6 @@ textarea{resize:none;min-height:80px}
   </div>
 </div>
 
-<!-- NC -->
 <div class="screen" id="sc-nc">
   <div class="app-header">
     <button class="app-header-back" onclick="goHome()">&#x2190;</button>
@@ -638,7 +514,6 @@ textarea{resize:none;min-height:80px}
   </div>
 </div>
 
-<!-- SAMPLING CALC -->
 <div class="screen" id="sc-calc">
   <div class="app-header">
     <button class="app-header-back" onclick="goHome()">&#x2190;</button>
@@ -683,7 +558,6 @@ textarea{resize:none;min-height:80px}
   </div>
 </div>
 
-<!-- SAVE MODAL -->
 <div class="modal-overlay" id="save-modal">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
@@ -693,7 +567,7 @@ textarea{resize:none;min-height:80px}
       <div class="s-sub" id="save-modal-sub"></div>
       <div class="sheet-rows">
         <div style="font-size:11px;font-weight:700;color:var(--gray3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">ข้อมูลที่บันทึก</div>
-        <div class="sr-row"><div class="sr-icon" style="background:#bbdefb;color:#0d47a1">D1</div><div style="font-size:13px"><strong>Cloudflare D1 Cloud</strong> — qa-factory-db</div></div>
+        <div class="sr-row"><div class="sr-icon" style="background:#bbdefb;color:#0d47a1">API</div><div style="font-size:13px"><strong>Worker API</strong> — qa-factory-db</div></div>
         <div class="sr-row"><div class="sr-icon" style="background:#c8e6c9;color:#1b5e20">XL</div><div style="font-size:13px"><strong>Excel</strong> — Receiving_Header + Detail</div></div>
         <div class="sr-row"><div class="sr-icon" style="background:#ffcdd2;color:#b71c1c">NC</div><div style="font-size:13px"><strong>NC_Log</strong> + <strong>Signatures</strong></div></div>
       </div>
@@ -705,7 +579,6 @@ textarea{resize:none;min-height:80px}
   </div>
 </div>
 
-<!-- NC MODAL -->
 <div class="modal-overlay" id="nc-modal">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
@@ -731,7 +604,7 @@ textarea{resize:none;min-height:80px}
 <div class="toast" id="toast"></div>
 
 <script>
-const LOGO_B64="data:image/jpeg;base64,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";
+const LOGO_B64="data:image/jpeg;base64,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";
 
 const SUPPLIERS = [
   {id:'SP0001',name:'บริษัท เบทาโกรเกษตรอุตสาหกรรม จำกัด (หมู)',type:'RM'},
@@ -905,6 +778,7 @@ function init(){
   renderHome(); renderHist(); renderNC();
   document.getElementById('save-modal').addEventListener('click',e=>{if(e.target===document.getElementById('save-modal'))closeSaveModal();});
   document.getElementById('nc-modal').addEventListener('click',e=>{if(e.target===document.getElementById('nc-modal'))closeNCModal();});
+  setTimeout(flushQueue, 1500); // Trigger queue processing on load
 }
 
 // ── NAV ──
@@ -972,7 +846,7 @@ function renderMats(){
   const el=document.getElementById('mat-list');
   if(!curMats.length){el.innerHTML='';return;}
   el.innerHTML=curMats.map((m,i)=>{
-    const mi=MATERIALS.find(x=>x.code===m.code)||{};
+    const mi=MATERIALS.find(x=>x.code===code)||{};
     const showT=mi.type==='RM';
     const samp=getSamp(m.code,parseFloat(m.qty));
     const tHtml=showT?`<div style="margin-bottom:12px">
