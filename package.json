@@ -1,0 +1,13 @@
+{
+  "name": "qa-receiving-api",
+  "version": "1.0.0",
+  "description": "SWI Foods QA Receiving API — Pure Worker, no npm deps",
+  "scripts": {
+    "dev":    "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:schema": "wrangler d1 execute qa-factory-db --file=./schema.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^3.95.0"
+  }
+}
