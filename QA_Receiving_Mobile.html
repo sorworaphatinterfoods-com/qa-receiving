@@ -23,7 +23,8 @@ const CF_DB     = '391d171b-81b2-4156-bff0-ad9f0ae7e6af';
 const D1_URL    = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCT}/d1/database/${CF_DB}/query`;
 const TOK_KEY   = 'swi_cf_token';
 const QUEUE_KEY = 'swi_sync_queue';
-
+const API_BASE  = 'https://qa-receiving-api.swi-foods.workers.dev';
+  
 function getCFToken(){ return localStorage.getItem(TOK_KEY)||''; }
 function setCFToken(t){ localStorage.setItem(TOK_KEY,t); }
 function cloudReady(){ return !!getCFToken()&&navigator.onLine; }
